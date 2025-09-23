@@ -36,11 +36,6 @@ h1 {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.start-content {
-    max-width: 100%;
-    margin: 0 auto;
-}
-
 .start-content h2 {
     color: #2c3e50;
     margin-bottom: 10px;
@@ -103,10 +98,6 @@ h1 {
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-.btn-start:active {
-    transform: translateY(0);
-}
-
 /* Стили для игрового экрана */
 #game-screen {
     transition: opacity 0.3s ease;
@@ -128,7 +119,7 @@ h1 {
     font-size: 14px;
 }
 
-/* Базовые стили для кнопок */
+/* Базовые стили для кнопок ответов */
 .answer-btn {
     padding: 14px 20px;
     margin: 6px 0;
@@ -142,7 +133,6 @@ h1 {
     display: block;
 }
 
-/* Исходные цвета кнопок */
 .answer-btn.btn-real {
     border-color: #28a745;
     color: #155724;
@@ -165,22 +155,18 @@ h1 {
     cursor: not-allowed;
 }
 
-/* Правильный ответ для данного письма */
 .answer-btn.correct-answer {
     background: #28a745 !important;
     border-color: #1e7e34 !important;
     color: white !important;
-    font-weight: bold;
     box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
 }
 
-/* Выбор пользователя - правильный */
 .answer-btn.user-choice.correct {
     box-shadow: 0 0 0 3px #28a745, 0 0 15px rgba(40, 167, 69, 0.3);
     transform: scale(1.02);
 }
 
-/* Выбор пользователя - неправильный */
 .answer-btn.user-choice.incorrect {
     box-shadow: 0 0 0 3px #dc3545;
     animation: shake 0.5s ease-in-out;
@@ -222,7 +208,7 @@ h1 {
     margin-bottom: 12px;
 }
 
-#next-btn, #restart-btn, #research-btn, #export-btn {
+#next-btn, #restart-btn {
     padding: 14px 20px;
     background: #3498db;
     color: white;
@@ -237,32 +223,10 @@ h1 {
     display: block;
 }
 
-#next-btn:hover, #restart-btn:hover, #research-btn:hover, #export-btn:hover {
+#next-btn:hover, #restart-btn:hover {
     background: #2980b9;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-#next-btn:active, #restart-btn:active, #research-btn:active, #export-btn:active {
-    transform: translateY(0);
-}
-
-/* Стили для кнопки экспорта */
-#export-btn {
-    background: #17a2b8 !important;
-}
-
-#export-btn:hover {
-    background: #138496 !important;
-}
-
-/* Стили для кнопки исследования */
-#research-btn {
-    background: #6c757d !important;
-}
-
-#research-btn:hover {
-    background: #545b62 !important;
 }
 
 /* Стили для экрана результатов */
@@ -278,65 +242,88 @@ h1 {
     margin: 8px 0;
 }
 
-#personal-result {
-    background: #e8f4fd;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 15px 0;
-    border-left: 4px solid #3498db;
+/* Стили для карточки результатов */
+.result-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: left;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-#personal-result p {
-    margin: 4px 0;
+.result-card h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+.result-card p {
+    margin: 10px 0;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
     font-size: 15px;
 }
 
-#personal-result strong {
+.result-card strong {
     color: #2c3e50;
-    font-size: 16px;
+    min-width: 200px;
+    display: inline-block;
 }
 
+/* Стили для кнопок действий с результатами */
 .result-actions {
-    margin-top: 20px;
+    margin-top: 25px;
 }
 
 .result-actions button {
-    margin: 5px 0;
+    margin: 8px 0;
     display: block;
     width: 100%;
-}
-
-/* Дополнительные улучшения */
-#question h3 {
-    color: #2c3e50;
-    margin-bottom: 12px;
-    font-size: 1.1em;
-}
-
-#result-text {
-    font-size: 1.1em;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
     font-weight: bold;
-    margin-bottom: 8px;
+    transition: all 0.3s ease;
 }
 
-#explanation {
-    font-style: italic;
-    color: #555;
-    line-height: 1.4;
-    font-size: 14px;
+.btn-copy {
+    background: #17a2b8;
+    color: white;
 }
 
-/* Анимации для плавных переходов */
-.screen {
-    transition: opacity 0.3s ease, transform 0.3s ease;
+.btn-save {
+    background: #28a745;
+    color: white;
 }
 
-.screen.active {
-    opacity: 1;
-    transform: translateY(0);
+.btn-copy:hover {
+    background: #138496;
+    transform: translateY(-2px);
 }
 
-/* Улучшения для очень маленьких экранов */
+.btn-save:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+/* Сообщение о копировании */
+.copy-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    border: 1px solid #c3e6cb;
+    font-weight: bold;
+}
+
+/* Адаптивность для мобильных */
 @media (max-width: 480px) {
     body {
         padding: 5px;
@@ -344,7 +331,6 @@ h1 {
     
     .container {
         padding: 10px;
-        border-radius: 5px;
     }
 
     h1 {
@@ -353,66 +339,25 @@ h1 {
 
     #start-screen {
         padding: 20px 10px;
-        margin: 10px 0;
     }
 
-    .btn-start {
-        padding: 12px 20px;
-        font-size: 15px;
+    .result-card {
+        padding: 15px;
     }
 
-    #email-container {
-        padding: 12px;
-        margin: 10px 0;
-    }
-
-    .answer-btn {
-        padding: 12px 15px;
+    .result-card p {
         font-size: 14px;
     }
 
-    #next-btn, #restart-btn, #research-btn, #export-btn {
-        padding: 12px 15px;
-        font-size: 14px;
-    }
-
-    #final-score {
-        font-size: 1.8em;
-    }
-
-    #personal-result {
-        padding: 12px;
+    .result-card strong {
+        min-width: 150px;
+        display: block;
+        margin-bottom: 5px;
     }
 }
 
-/* Горизонтальная ориентация для мобильных */
-@media (max-width: 600px) and (orientation: landscape) {
-    .container {
-        max-width: 100%;
-        padding: 10px;
-    }
-    
-    #start-screen {
-        padding: 20px;
-    }
-    
-    .form-group {
-        margin: 15px 0;
-    }
-    
-    .answer-btn {
-        padding: 10px 15px;
-        font-size: 14px;
-    }
-}
-
-/* Улучшения для планшетов */
-@media (min-width: 601px) and (max-width: 768px) {
-    .container {
-        padding: 20px;
-        margin: 10px;
-    }
-    
+/* Для планшетов и десктопов */
+@media (min-width: 768px) {
     .answer-btn {
         width: calc(50% - 12px);
         display: inline-block;
@@ -424,32 +369,13 @@ h1 {
         display: inline-block;
         margin: 5px;
     }
-}
-
-/* Стили для кнопок на десктопе */
-@media (min-width: 769px) {
-    .answer-btn {
-        width: auto;
-        display: inline-block;
-    }
     
-    .result-actions button {
-        width: auto;
-        display: inline-block;
-        margin: 0 10px 10px 0;
-    }
-    
-    #next-btn, #restart-btn, #research-btn, #export-btn {
+    #next-btn, #restart-btn {
         width: auto;
         display: inline-block;
         padding: 12px 25px;
+        margin: 0 10px;
     }
-}
-
-/* Стили для состояний загрузки */
-.loading {
-    opacity: 0.7;
-    pointer-events: none;
 }
 
 /* Улучшения для доступности */
@@ -463,13 +389,7 @@ input:focus {
     outline-offset: 2px;
 }
 
-/* Убедимся, что все кнопки кликабельны на мобильных */
 button {
     -webkit-tap-highlight-color: transparent;
-    min-height: 44px; /* Минимальная высота для удобного касания */
-}
-
-/* Предотвращаем масштабирование при фокусе на iOS */
-input, textarea, select {
-    font-size: 16px; /* Предотвращает масштабирование в iOS */
+    min-height: 44px;
 }
