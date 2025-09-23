@@ -13,7 +13,24 @@
             <p>Проверь, сможешь ли ты отличить настоящее письмо от мошеннического!</p>
         </header>
 
-        <div id="game-screen">
+        <!-- НАЧАЛЬНЫЙ ЭКРАН С ФОРМОЙ -->
+        <div id="start-screen">
+            <div class="start-content">
+                <h2>Перед началом теста</h2>
+                <p>Введите ваше имя для сохранения результатов</p>
+                <form id="user-form">
+                    <div class="form-group">
+                        <label for="user-name">Ваше имя:</label>
+                        <input type="text" id="user-name" name="user-name" required 
+                               placeholder="Введите ваше имя" autocomplete="name">
+                    </div>
+                    <button type="submit" id="start-btn" class="btn-start">Начать тест</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ЭКРАН ИГРЫ (изначально скрыт) -->
+        <div id="game-screen" class="hidden">
             <div id="score">Очки: <span id="points">0</span></div>
 
             <div id="email-container">
@@ -30,9 +47,9 @@
             </div>
 
             <div id="question">
-    <h3>Это письмо:</h3>
-    <button class="answer-btn btn-real" data-answer="real">Настоящее</button>
-    <button class="answer-btn btn-phishing" data-answer="phishing">Фишинг</button>
+                <h3>Это письмо:</h3>
+                <button class="answer-btn btn-real" data-answer="real">Настоящее</button>
+                <button class="answer-btn btn-phishing" data-answer="phishing">Фишинг</button>
             </div>
 
             <div id="feedback" class="hidden">
@@ -42,14 +59,20 @@
             </div>
         </div>
 
+        <!-- ЭКРАН РЕЗУЛЬТАТОВ -->
         <div id="results" class="hidden">
             <h2>Результат: <span id="final-score">0</span>/<span id="total-questions">0</span></h2>
-            <button id="restart-btn">Начать заново</button>
-            <button id="research-btn" style="margin: 10px; padding: 10px;">Посмотреть результаты исследования</button>
+            <div id="personal-result">
+                <!-- Сюда будет вставлено персональное сообщение с именем -->
+            </div>
+            <div class="result-actions">
+                <button id="restart-btn">Начать заново</button>
+                <button id="export-btn" class="btn-export">Сохранить мой результат</button>
+                <button id="research-btn">Посмотреть результаты исследования</button>
+            </div>
         </div>
     </div>
 
     <script src="script.js"></script>
 </body>
-
 </html>
