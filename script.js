@@ -1,3 +1,4 @@
+
 // База данных писем для тренажера
 const emails = [
     {
@@ -56,7 +57,7 @@ let researchData = {
 let currentEmailIndex = 0;
 let score = 0;
 let totalQuestions = 0;
-let questionStartTime = new Date();
+let questionStartTime = new Date(); // ВАЖНО: Добавлена эта переменная
 
 // Элементы страницы
 const startScreen = document.getElementById('start-screen');
@@ -107,7 +108,9 @@ function loadEmail(index) {
     emailContent.innerHTML = email.content;
     resetButtons();
     feedback.classList.add('hidden');
-    questionStartTime = new Date();
+    
+    // Фиксируем время когда письмо было показано
+    questionStartTime = new Date(); // ВАЖНО: Добавлена эта строка
 }
 
 // Запись результата в базу данных
@@ -206,8 +209,9 @@ function analyzeResearchData() {
         return current.successRate < hardest.successRate ? current : hardest;
     }, {successRate: 100, subject: 'Нет данных'});
     
-    // Среднее время
-    const averageTime = Math.round(results.reduce((sum, r) => sum + r.timeSpent, 0) / total);
+    // Среднее время (в секундах для удобства чтения)
+    const averageTimeMs = Math.round(results.reduce((sum, r) => sum + r.timeSpent, 0) / total);
+    const averageTimeSeconds = Math.round(averageTimeMs / 100) / 10; // Переводим в секунды
     
     return {
         participantId: researchData.participantId,
@@ -216,7 +220,8 @@ function analyzeResearchData() {
         totalQuestions: total,
         correctAnswers: correctAnswers,
         successRate: successRate,
-        averageTime: averageTime,
+        averageTime: averageTimeMs,
+        averageTimeSeconds: averageTimeSeconds, // Добавляем время в секундах
         hardestEmail: hardestEmail,
         emailStats: emailStats
     };
@@ -240,12 +245,14 @@ function showDetailedResults() {
             
             <p><strong>🎯 Правильных ответов:</strong> ${analysis.correctAnswers} из ${analysis.totalQuestions}</p>
             <p><strong>📈 Процент правильных:</strong> ${analysis.successRate}%</p>
-            <p><strong>⚡ Среднее время ответа:</strong> ${analysis.averageTime} мс</p>
+            <p><strong>⚡ Среднее время ответа:</strong> ${analysis.averageTimeSeconds} сек</p>
             <p><strong>🔍 Самое сложное письмо:</strong> "${analysis.hardestEmail.subject}"</p>
             <p><strong>🏆 Уровень подготовки:</strong> ${getSkillLevel(analysis.successRate)}</p>
         </div>
     `;
 }
+
+
 
 // Определение уровня навыков
 function getSkillLevel(percentage) {
@@ -460,5 +467,6 @@ function init() {
 
 // Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', init);
+
 
 
