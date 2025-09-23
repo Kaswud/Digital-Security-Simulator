@@ -47,9 +47,10 @@ const emails = [
 // Система сбора данных
 let researchData = {
     participantId: generateId(),
+    userName: '', // Добавляем поле для имени
     startTime: new Date(),
     results: [],
-    group: getRandomGroup() // A - контрольная, B - экспериментальная
+    group: getRandomGroup()
 };
 
 let currentEmailIndex = 0;
@@ -57,6 +58,11 @@ let score = 0;
 let totalQuestions = 0;
 
 // Элементы страницы
+const startScreen = document.getElementById('start-screen');
+const gameScreen = document.getElementById('game-screen');
+const resultsScreen = document.getElementById('results');
+const userForm = document.getElementById('user-form');
+const userNameInput = document.getElementById('user-name');
 const emailSender = document.getElementById('sender');
 const emailSubject = document.getElementById('subject');
 const emailContent = document.getElementById('email-content');
@@ -68,10 +74,13 @@ const nextButton = document.getElementById('next-btn');
 const pointsDisplay = document.getElementById('points');
 const finalScore = document.getElementById('final-score');
 const totalQuestionsDisplay = document.getElementById('total-questions');
-const resultsScreen = document.getElementById('results');
-const gameScreen = document.getElementById('game-screen');
+const personalResult = document.getElementById('personal-result');
 const restartButton = document.getElementById('restart-btn');
-const researchButton = document.getElementById('research-btn'); // Добавь эту кнопку в HTML
+const exportButton = document.getElementById('export-btn');
+const researchButton = document.getElementById('research-btn');
+
+// Переменная для хранения финального результата
+let finalResultText = '';
 
 // Генератор ID участника
 function generateId() {
@@ -122,7 +131,7 @@ function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
         difficulty: email.difficulty
     });
     
-    // Сохраняем в localStorage (чтобы данные не потерялись)
+    // Сохраняем в localStorage
     localStorage.setItem('researchData', JSON.stringify(researchData));
 }
 
@@ -207,19 +216,90 @@ function analyzeResearchData() {
     // Находим самое сложное письмо
     const hardestEmail = Object.values(emailStats).reduce((hardest, current) => {
         return current.successRate < hardest.successRate ? current : hardest;
-    });
+    }, {successRate: 100});
     
     return {
         participantId: researchData.participantId,
+        userName: researchData.userName,
         group: researchData.group,
         totalAnswers: total,
         correctAnswers: correctAnswers,
         successRate: successRate,
         averageTime: Math.round(results.reduce((sum, r) => sum + r.timeSpent, 0) / total),
         hardestEmail: hardestEmail,
-        emailStats: emailStats,
-        group: researchData.group
+        emailStats: emailStats
     };
+}
+
+// Подготовка текста для экспорта
+function prepareExportText() {
+    const analysis = analyzeResearchData();
+    const userName = researchData.userName || 'Аноним';
+    const currentDate = new Date().toLocaleDateString('ru-RU');
+    
+    let exportText = `
+РЕЗУЛЬТАТ ТЕСТА "ТРЕНАЖЕР ПО КИБЕРБЕЗОПАСНОСТИ"
+=========================================
+Участник: ${userName}
+ID участника: ${researchData.participantId}
+Группа: ${researchData.group}
+Дата прохождения: ${currentDate}
+
+ОБЩИЕ РЕЗУЛЬТАТЫ:
+-----------------
+Правильных ответов: ${analysis.correctAnswers} из ${analysis.totalAnswers}
+Процент правильных: ${analysis.successRate}%
+Среднее время ответа: ${analysis.averageTime} мс
+
+ДЕТАЛЬНАЯ СТАТИСТИКА:
+--------------------
+`;
+    
+    // Добавляем статистику по каждому письму
+    emails.forEach((email, index) => {
+        const stats = analysis.emailStats[email.id];
+        exportText += `\n${index + 1}. "${email.subject}"\n`;
+        exportText += `   Сложность: ${getDifficultyText(email.difficulty)}\n`;
+        exportText += `   Правильных ответов: ${stats ? stats.successRate + '%' : 'нет данных'}\n`;
+    });
+    
+    exportText += `\nСАМОЕ СЛОЖНОЕ Письмо:\n`;
+    exportText += `"${analysis.hardestEmail.subject}" - ${analysis.hardestEmail.successRate}% правильных ответов\n\n`;
+    
+    exportText += `ВРЕМЯ ПРОХОЖДЕНИЯ: ${researchData.startTime.toLocaleString('ru-RU')}`;
+    
+    return exportText;
+}
+
+function getDifficultyText(difficulty) {
+    const difficulties = {
+        'easy': 'Легкая',
+        'medium': 'Средняя', 
+        'hard': 'Сложная'
+    };
+    return difficulties[difficulty] || difficulty;
+}
+
+// Экспорт результатов в файл
+function exportResults() {
+    const exportText = prepareExportText();
+    
+    // Создаем Blob объект для текста
+    const blob = new Blob([exportText], { type: 'text/plain;charset=utf-8' });
+    
+    // Создаем временную ссылку для скачивания
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    
+    // Генерируем имя файла с именем пользователя и датой
+    const userName = researchData.userName || 'Аноним';
+    const date = new Date().toISOString().split('T')[0];
+    link.download = `Результат_теста_${userName}_${date}.txt`;
+    
+    // Кликаем по ссылке для запуска скачивания
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 // Показать результаты исследования
@@ -231,9 +311,8 @@ function showResearchResults() {
         return;
     }
     
-    // Создаем красивый отчет
     const report = `
-Участник: ${analysis.participantId}
+Участник: ${analysis.userName || analysis.participantId}
 Группа: ${analysis.group}
 Общие результаты:
 - Правильных ответов: ${analysis.correctAnswers}/${analysis.totalAnswers} (${analysis.successRate}%)
@@ -248,25 +327,8 @@ ${emails.map(email => {
 Самое сложное письмо: "${analysis.hardestEmail.subject}" (${analysis.hardestEmail.successRate}% правильных ответов)
     `;
     
-    // Показываем отчет (можно улучшить вывод на страницу)
     console.log('Результаты исследования:', report);
     alert('Результаты сохранены! Посмотри консоль браузера (F12) для подробного отчета.');
-    
-    // Для учителя: можно вывести на страницу
-    displayResultsOnPage(analysis);
-}
-
-// Вывод результатов на страницу (дополнительная функция)
-function displayResultsOnPage(analysis) {
-    const resultsDiv = document.createElement('div');
-    resultsDiv.innerHTML = `
-        <h3>Результаты исследования</h3>
-        <p><strong>Участник:</strong> ${analysis.participantId}</p>
-        <p><strong>Группа:</strong> ${analysis.group}</p>
-        <p><strong>Результат:</strong> ${analysis.correctAnswers}/${analysis.totalAnswers} (${analysis.successRate}%)</p>
-        <p><strong>Самое сложное письмо:</strong> "${analysis.hardestEmail.subject}"</p>
-    `;
-    document.body.appendChild(resultsDiv);
 }
 
 // Следующее письмо
@@ -277,8 +339,6 @@ function nextEmail() {
         loadEmail(currentEmailIndex);
     } else {
         showResults();
-        // Автоматически показываем исследовательские результаты
-        setTimeout(showResearchResults, 1000);
     }
 }
 
@@ -288,6 +348,13 @@ function showResults() {
     resultsScreen.classList.remove('hidden');
     finalScore.textContent = score;
     totalQuestionsDisplay.textContent = totalQuestions;
+    
+    // Показываем персональный результат с именем
+    const userName = researchData.userName || 'Участник';
+    personalResult.innerHTML = `
+        <p><strong>${userName}</strong>, вы успешно завершили тест!</p>
+        <p>Ваш результат сохранен для анализа.</p>
+    `;
 }
 
 // Перезапуск игры
@@ -300,38 +367,66 @@ function restartGame() {
     // Новые данные для нового участника
     researchData = {
         participantId: generateId(),
+        userName: researchData.userName, // Сохраняем имя для повторных попыток
         startTime: new Date(),
         results: [],
         group: getRandomGroup()
     };
     
     resultsScreen.classList.add('hidden');
-    gameScreen.classList.remove('hidden');
-    loadEmail(currentEmailIndex);
+    startScreen.classList.remove('hidden'); // Возвращаем к форме ввода имени
+}
+
+// Обработчик отправки формы
+function handleFormSubmit(event) {
+    event.preventDefault();
+    
+    const userName = userNameInput.value.trim();
+    if (userName) {
+        researchData.userName = userName;
+        localStorage.setItem('researchData', JSON.stringify(researchData));
+        
+        startScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        loadEmail(currentEmailIndex);
+    } else {
+        alert('Пожалуйста, введите ваше имя.');
+    }
 }
 
 // Загрузка сохраненных данных
 function loadSavedData() {
     const saved = localStorage.getItem('researchData');
     if (saved) {
-        researchData = JSON.parse(saved);
+        const savedData = JSON.parse(saved);
+        researchData.userName = savedData.userName || '';
+        if (researchData.userName) {
+            userNameInput.value = researchData.userName;
+        }
     }
 }
 
 // Назначаем обработчики событий
+userForm.addEventListener('submit', handleFormSubmit);
 answerButtons[0].addEventListener('click', () => checkAnswer(false));
 answerButtons[1].addEventListener('click', () => checkAnswer(true));
 nextButton.addEventListener('click', nextEmail);
 restartButton.addEventListener('click', restartGame);
-
-// Добавляем кнопку для просмотра результатов (добавь в HTML)
-if (researchButton) {
-    researchButton.addEventListener('click', showResearchResults);
-}
+exportButton.addEventListener('click', exportResults);
+researchButton.addEventListener('click', showResearchResults);
 
 // Инициализация
-loadSavedData();
-loadEmail(currentEmailIndex);
+function init() {
+    loadSavedData();
+    
+    // Показываем стартовый экран с формой
+    startScreen.classList.remove('hidden');
+    gameScreen.classList.add('hidden');
+    resultsScreen.classList.add('hidden');
+}
 
-// Для отладки: выводим данные в консоль
-console.log('Исследование начато. Участник:', researchData.participantId, 'Группа:', researchData.group);
+// Запускаем инициализацию при загрузке страницы
+document.addEventListener('DOMContentLoaded', init);
+
+// Для отладки
+console.log('Тренажер загружен. Ожидание ввода имени участника.');
