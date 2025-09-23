@@ -41,36 +41,6 @@ const emails = [
         isPhishing: true,
         explanation: "ФИШИНГ! Настоящий банк никогда не просит переводить деньги для получения выигрыша. Это классическая мошенническая схема.",
         difficulty: "easy"
-    },
-    {
-        id: 4,
-        sender: "ВКонтакте <security@vk.com>",
-        subject: "Подтвердите вход в аккаунт",
-        content: `
-            <p>Был выполнен вход в ваш аккаунт ВКонтакте.</p>
-            <p>Устройство: iPhone 13 (iOS 16.0)</p>
-            <p>Местоположение: Москва, Россия</p>
-            <p>Если это были вы, можете проигнорировать это письмо.</p>
-            <p>Если нет, <a href="#" onclick="return false">защитите аккаунт</a>.</p>
-        `,
-        isPhishing: false,
-        explanation: "НАСТОЯЩЕЕ! Письмо содержит конкретные детали, нет срочных требований, домен vk.com официальный.",
-        difficulty: "medium"
-    },
-    {
-        id: 5,
-        sender: "Apple Support",
-        subject: "Ваш Apple ID заблокирован",
-        content: `
-            <p>Уважаемый пользователь!</p>
-            <p>Обнаружена подозрительная активность с вашим Apple ID.</p>
-            <p>Для разблокировки немедленно перейдите по ссылке:</p>
-            <p><a href="#" onclick="return false">https://apple-id-security.verification.com</a></p>
-            <p>Срок действия: 2 часа.</p>
-        `,
-        isPhishing: true,
-        explanation: "ФИШИНГ! Настоящий Apple использует домен apple.com. Создается искусственная срочность и паника.",
-        difficulty: "hard"
     }
 ];
 
@@ -124,12 +94,6 @@ function getRandomGroup() {
 function resetButtons() {
     answerButtons.forEach(btn => {
         btn.classList.remove('disabled', 'user-choice', 'correct', 'incorrect', 'correct-answer');
-        const answerType = btn.getAttribute('data-answer');
-        if (answerType === 'real') {
-            btn.classList.add('btn-real');
-        } else if (answerType === 'phishing') {
-            btn.classList.add('btn-phishing');
-        }
         btn.disabled = false;
     });
 }
@@ -312,7 +276,6 @@ async function copyResultsToClipboard() {
         
         // Показываем сообщение об успехе
         copyMessage.classList.remove('hidden');
-        copyMessage.style.display = 'block';
         
         // Скрываем сообщение через 3 секунды
         setTimeout(() => {
@@ -458,22 +421,38 @@ function loadSavedData() {
     }
 }
 
+// Назначение обработчиков для кнопок результатов
+function setupResultButtons() {
+    if (restartButton) {
+        restartButton.addEventListener('click', restartGame);
+    }
+    
+    if (copyResultsBtn) {
+        copyResultsBtn.addEventListener('click', copyResultsToClipboard);
+    }
+    
+    if (saveResultsBtn) {
+        saveResultsBtn.addEventListener('click', saveResultsToFile);
+    }
+}
+
 // Инициализация
 function init() {
     loadSavedData();
-    
-    startScreen.classList.remove('hidden');
-    gameScreen.classList.add('hidden');
-    resultsScreen.classList.add('hidden');
     
     // Назначаем обработчики
     userForm.addEventListener('submit', handleFormSubmit);
     answerButtons[0].addEventListener('click', () => checkAnswer(false));
     answerButtons[1].addEventListener('click', () => checkAnswer(true));
     nextButton.addEventListener('click', nextEmail);
-    restartButton.addEventListener('click', restartGame);
-    copyResultsBtn.addEventListener('click', copyResultsToClipboard);
-    saveResultsBtn.addEventListener('click', saveResultsToFile);
+    
+    // Назначаем обработчики для кнопок результатов
+    setupResultButtons();
+    
+    // Показываем стартовый экран
+    startScreen.classList.remove('hidden');
+    gameScreen.classList.add('hidden');
+    resultsScreen.classList.add('hidden');
 }
 
 // Запуск при загрузке страницы
