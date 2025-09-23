@@ -29,7 +29,7 @@
             </div>
         </div>
 
-        <!-- ЭКРАН ИГРЫ (изначально скрыт) -->
+        <!-- ЭКРАН ИГРЫ -->
         <div id="game-screen" class="hidden">
             <div id="score">Очки: <span id="points">0</span></div>
 
@@ -61,14 +61,22 @@
 
         <!-- ЭКРАН РЕЗУЛЬТАТОВ -->
         <div id="results" class="hidden">
-            <h2>Результат: <span id="final-score">0</span>/<span id="total-questions">0</span></h2>
+            <h2>Ваш результат: <span id="final-score">0</span>/<span id="total-questions">0</span></h2>
+            
+            <!-- Блок с детальными результатами -->
             <div id="personal-result">
-                <!-- Сюда будет вставлено персональное сообщение с именем -->
+                <!-- Сюда вставляются результаты -->
             </div>
+
             <div class="result-actions">
-                <button id="restart-btn">Начать заново</button>
-                <button id="export-btn" class="btn-export">Сохранить мой результат</button>
-                <button id="research-btn">Посмотреть результаты исследования</button>
+                <button id="restart-btn">Пройти тест еще раз</button>
+                <button id="copy-results-btn" class="btn-copy">📋 Скопировать результаты</button>
+                <button id="save-results-btn" class="btn-save">💾 Сохранить в файл</button>
+            </div>
+
+            <!-- Сообщение о копировании -->
+            <div id="copy-message" class="hidden copy-message">
+                ✅ Результаты скопированы! Можете отправить их учителю
             </div>
         </div>
     </div>
