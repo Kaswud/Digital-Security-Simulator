@@ -128,12 +128,13 @@ function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
 
 // Проверка ответа
 function checkAnswer(userAnswer) {
-    const startTime = new Date();
+    const answerTime = new Date();
+    const timeSpent = answerTime - questionStartTime;
+    
     const email = emails[currentEmailIndex];
     const isCorrect = (userAnswer === email.isPhishing);
     
     totalQuestions++;
-    const timeSpent = new Date() - startTime;
     
     recordResult(currentEmailIndex, userAnswer, isCorrect, timeSpent);
     
@@ -457,3 +458,4 @@ function init() {
 
 // Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', init);
+
