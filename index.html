@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажер по кибербезопасности</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Тренажер: Учимся распознавать фишинг</h1>
+            <p>Проверь, сможешь ли ты отличить настоящее письмо от мошеннического!</p>
+        </header>
+
+        <div id="game-screen">
+            <div id="score">Очки: <span id="points">0</span></div>
+
+            <div id="email-container">
+                <div id="email-header">
+                    <strong>От:</strong> <span id="sender">Сбербанк России</span><br>
+                    <strong>Тема:</strong> <span id="subject">Срочно! Ваш счет заблокирован</span>
+                </div>
+                <div id="email-content">
+                    <p>Уважаемый клиент!</p>
+                    <p>В вашем аккаунте зафиксирована подозрительная активность. Для разблокировки счета перейдите по ссылке:</p>
+                    <p><a href="#" id="link">https://sberbank-security.ru/verify</a></p>
+                    <p>Если не подтвердите данные в течение 24 часов, счет будет заблокирован.</p>
+                </div>
+            </div>
+
+            <div id="question">
+    <h3>Это письмо:</h3>
+    <button class="answer-btn btn-real" data-answer="real">Настоящее</button>
+    <button class="answer-btn btn-phishing" data-answer="phishing">Фишинг</button>
+            </div>
+
+            <div id="feedback" class="hidden">
+                <p id="result-text"></p>
+                <p id="explanation"></p>
+                <button id="next-btn">Следующее письмо</button>
+            </div>
+        </div>
+
+        <div id="results" class="hidden">
+            <h2>Результат: <span id="final-score">0</span>/<span id="total-questions">0</span></h2>
+            <button id="restart-btn">Начать заново</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
