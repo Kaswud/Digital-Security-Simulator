@@ -1,4 +1,3 @@
-
 // База данных писем для тренажера
 const emails = [
     {
@@ -57,7 +56,7 @@ let researchData = {
 let currentEmailIndex = 0;
 let score = 0;
 let totalQuestions = 0;
-let questionStartTime = new Date(); // ВАЖНО: Добавлена эта переменная
+let emailStartTimes = []; // Массив для хранения времени начала каждого вопроса
 
 // Элементы страницы
 const startScreen = document.getElementById('start-screen');
@@ -109,8 +108,10 @@ function loadEmail(index) {
     resetButtons();
     feedback.classList.add('hidden');
     
-    // Фиксируем время когда письмо было показано
-    questionStartTime = new Date(); // ВАЖНО: Добавлена эта строка
+    // Записываем время начала показа этого письма
+    emailStartTimes[index] = new Date();
+    
+    console.log(`Письмо ${index + 1} показано в:`, emailStartTimes[index].getTime());
 }
 
 // Запись результата в базу данных
@@ -134,14 +135,25 @@ function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
 // Проверка ответа
 function checkAnswer(userAnswer) {
     const answerTime = new Date();
-    const timeSpent = answerTime - questionStartTime;
+    const emailIndex = currentEmailIndex;
     
-    const email = emails[currentEmailIndex];
+    // Получаем время начала для текущего письма
+    const startTime = emailStartTimes[emailIndex];
+    let timeSpent = 0;
+    
+    if (startTime) {
+        timeSpent = answerTime - startTime;
+        console.log(`Время ответа для письма ${emailIndex + 1}:`, timeSpent, 'мс');
+    } else {
+        console.warn('Время начала для письма не найдено, используется 0');
+    }
+    
+    const email = emails[emailIndex];
     const isCorrect = (userAnswer === email.isPhishing);
     
     totalQuestions++;
     
-    recordResult(currentEmailIndex, userAnswer, isCorrect, timeSpent);
+    recordResult(emailIndex, userAnswer, isCorrect, timeSpent);
     
     // Подсвечиваем кнопки
     answerButtons.forEach(btn => {
@@ -209,9 +221,13 @@ function analyzeResearchData() {
         return current.successRate < hardest.successRate ? current : hardest;
     }, {successRate: 100, subject: 'Нет данных'});
     
-    // Среднее время (в секундах для удобства чтения)
-    const averageTimeMs = Math.round(results.reduce((sum, r) => sum + r.timeSpent, 0) / total);
-    const averageTimeSeconds = Math.round(averageTimeMs / 100) / 10; // Переводим в секунды
+    // Среднее время (исключаем нулевые значения)
+    const validTimes = results.filter(r => r.timeSpent > 0).map(r => r.timeSpent);
+    const averageTime = validTimes.length > 0 ? Math.round(validTimes.reduce((sum, time) => sum + time, 0) / validTimes.length) : 0;
+    
+    console.log('Все времена ответов:', results.map(r => r.timeSpent));
+    console.log('Валидные времена:', validTimes);
+    console.log('Среднее время:', averageTime);
     
     return {
         participantId: researchData.participantId,
@@ -220,10 +236,11 @@ function analyzeResearchData() {
         totalQuestions: total,
         correctAnswers: correctAnswers,
         successRate: successRate,
-        averageTime: averageTimeMs,
-        averageTimeSeconds: averageTimeSeconds, // Добавляем время в секундах
+        averageTime: averageTime,
+        averageTimeSeconds: (averageTime / 1000).toFixed(1),
         hardestEmail: hardestEmail,
-        emailStats: emailStats
+        emailStats: emailStats,
+        allTimes: results.map(r => r.timeSpent) // Для отладки
     };
 }
 
@@ -252,8 +269,6 @@ function showDetailedResults() {
     `;
 }
 
-
-
 // Определение уровня навыков
 function getSkillLevel(percentage) {
     if (percentage >= 90) return 'Эксперт 👑';
@@ -275,7 +290,7 @@ async function copyResultsToClipboard() {
 
 🎯 Результат: ${analysis.correctAnswers} из ${analysis.totalQuestions}
 📈 Процент правильных: ${analysis.successRate}%
-⚡ Среднее время ответа: ${analysis.averageTime} мс
+⚡ Среднее время ответа: ${analysis.averageTimeSeconds} сек
 🔍 Самое сложное письмо: "${analysis.hardestEmail.subject}"
 🏆 Уровень: ${getSkillLevel(analysis.successRate)}
 
@@ -314,7 +329,7 @@ ID тестирования: ${analysis.participantId}
 -----------------
 Правильных ответов: ${analysis.correctAnswers} из ${analysis.totalQuestions}
 Процент правильных: ${analysis.successRate}%
-Среднее время ответа: ${analysis.averageTime} мс
+Среднее время ответа: ${analysis.averageTimeSeconds} сек
 Уровень подготовки: ${getSkillLevel(analysis.successRate)}
 
 ДЕТАЛЬНАЯ СТАТИСТИКА:
@@ -389,6 +404,7 @@ function restartGame() {
     score = 0;
     totalQuestions = 0;
     pointsDisplay.textContent = score;
+    emailStartTimes = []; // Очищаем массив времени
     
     researchData = {
         participantId: generateId(),
@@ -410,6 +426,7 @@ function handleFormSubmit(event) {
     if (userName) {
         researchData.userName = userName;
         localStorage.setItem('researchData', JSON.stringify(researchData));
+        emailStartTimes = []; // Инициализируем массив времени
         
         startScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
@@ -467,6 +484,3 @@ function init() {
 
 // Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', init);
-
-
-
