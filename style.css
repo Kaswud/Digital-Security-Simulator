@@ -2,7 +2,7 @@ body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
     margin: 0;
-    padding: 20px;
+    padding: 10px;
     background-color: #f4f4f4;
 }
 
@@ -10,56 +10,60 @@ body {
     max-width: 800px;
     margin: 0 auto;
     background: white;
-    padding: 20px;
+    padding: 15px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
 h1 {
     color: #2c3e50;
+    font-size: 1.4em;
+    margin-bottom: 10px;
 }
 
 /* Стили для начального экрана с формой */
 #start-screen {
     text-align: center;
-    padding: 40px 20px;
+    padding: 30px 15px;
     background: #f8f9fa;
     border-radius: 10px;
-    margin: 20px 0;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin: 15px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .start-content {
-    max-width: 500px;
+    max-width: 100%;
     margin: 0 auto;
 }
 
 .start-content h2 {
     color: #2c3e50;
     margin-bottom: 10px;
+    font-size: 1.3em;
 }
 
 .start-content p {
     color: #666;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
+    font-size: 0.95em;
 }
 
 .form-group {
-    margin: 30px 0;
+    margin: 20px 0;
     text-align: left;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     font-weight: bold;
     color: #333;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .form-group input {
@@ -81,14 +85,16 @@ h1 {
 .btn-start {
     background: #28a745;
     color: white;
-    padding: 15px 30px;
-    font-size: 18px;
+    padding: 14px 25px;
+    font-size: 16px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: bold;
     margin-top: 10px;
+    width: 100%;
+    max-width: 300px;
 }
 
 .btn-start:hover {
@@ -108,8 +114,8 @@ h1 {
 
 #email-container {
     border: 2px solid #ddd;
-    padding: 20px;
-    margin: 20px 0;
+    padding: 15px;
+    margin: 15px 0;
     background: #f9f9f9;
     border-radius: 5px;
 }
@@ -117,20 +123,23 @@ h1 {
 #email-header {
     background: #eaeaea;
     padding: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     border-radius: 3px;
+    font-size: 14px;
 }
 
 /* Базовые стили для кнопок */
 .answer-btn {
-    padding: 12px 25px;
-    margin: 8px;
-    font-size: 16px;
+    padding: 14px 20px;
+    margin: 6px 0;
+    font-size: 15px;
     cursor: pointer;
     border: 2px solid;
     border-radius: 8px;
     transition: all 0.3s ease;
     font-weight: bold;
+    width: 100%;
+    display: block;
 }
 
 /* Исходные цвета кнопок */
@@ -168,7 +177,7 @@ h1 {
 /* Выбор пользователя - правильный */
 .answer-btn.user-choice.correct {
     box-shadow: 0 0 0 3px #28a745, 0 0 15px rgba(40, 167, 69, 0.3);
-    transform: scale(1.05);
+    transform: scale(1.02);
 }
 
 /* Выбор пользователя - неправильный */
@@ -178,15 +187,15 @@ h1 {
 }
 
 @keyframes shake {
-    0%, 100% { transform: translateX(0) scale(1.05); }
-    25% { transform: translateX(-8px) scale(1.05); }
-    50% { transform: translateX(8px) scale(1.05); }
-    75% { transform: translateX(-8px) scale(1.05); }
+    0%, 100% { transform: translateX(0) scale(1.02); }
+    25% { transform: translateX(-5px) scale(1.02); }
+    50% { transform: translateX(5px) scale(1.02); }
+    75% { transform: translateX(-5px) scale(1.02); }
 }
 
 #feedback {
-    margin-top: 25px;
-    padding: 20px;
+    margin-top: 20px;
+    padding: 15px;
     border-radius: 8px;
     border: 2px solid;
 }
@@ -208,101 +217,113 @@ h1 {
 #score {
     text-align: right;
     font-weight: bold;
-    font-size: 18px;
+    font-size: 16px;
     color: #2c3e50;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
 }
 
-#next-btn, #restart-btn, #research-btn {
-    padding: 12px 25px;
+#next-btn, #restart-btn, #research-btn, #export-btn {
+    padding: 14px 20px;
     background: #3498db;
     color: white;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
     transition: all 0.3s ease;
-    margin-top: 10px;
+    margin: 8px 0;
+    width: 100%;
+    display: block;
 }
 
-#next-btn:hover, #restart-btn:hover, #research-btn:hover {
+#next-btn:hover, #restart-btn:hover, #research-btn:hover, #export-btn:hover {
     background: #2980b9;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-#next-btn:active, #restart-btn:active, #research-btn:active {
+#next-btn:active, #restart-btn:active, #research-btn:active, #export-btn:active {
     transform: translateY(0);
 }
 
 /* Стили для кнопки экспорта */
-.btn-export {
+#export-btn {
     background: #17a2b8 !important;
-    padding: 12px 25px !important;
-    margin: 10px !important;
 }
 
-.btn-export:hover {
+#export-btn:hover {
     background: #138496 !important;
+}
+
+/* Стили для кнопки исследования */
+#research-btn {
+    background: #6c757d !important;
+}
+
+#research-btn:hover {
+    background: #545b62 !important;
 }
 
 /* Стили для экрана результатов */
 #results {
     text-align: center;
-    padding: 30px;
+    padding: 20px 10px;
 }
 
 #final-score {
-    font-size: 2.5em;
+    font-size: 2.2em;
     color: #2c3e50;
     font-weight: bold;
-    margin: 10px 0;
+    margin: 8px 0;
 }
 
 #personal-result {
     background: #e8f4fd;
-    padding: 20px;
+    padding: 15px;
     border-radius: 8px;
-    margin: 20px 0;
+    margin: 15px 0;
     border-left: 4px solid #3498db;
 }
 
 #personal-result p {
-    margin: 5px 0;
-    font-size: 16px;
+    margin: 4px 0;
+    font-size: 15px;
 }
 
 #personal-result strong {
     color: #2c3e50;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .result-actions {
-    margin-top: 30px;
+    margin-top: 20px;
 }
 
 .result-actions button {
-    margin: 0 10px 10px 10px;
-    display: inline-block;
+    margin: 5px 0;
+    display: block;
+    width: 100%;
 }
 
 /* Дополнительные улучшения */
 #question h3 {
     color: #2c3e50;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
+    font-size: 1.1em;
 }
 
 #result-text {
-    font-size: 1.2em;
+    font-size: 1.1em;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 #explanation {
     font-style: italic;
     color: #555;
-    line-height: 1.5;
+    line-height: 1.4;
+    font-size: 14px;
 }
 
 /* Анимации для плавных переходов */
@@ -315,57 +336,113 @@ h1 {
     transform: translateY(0);
 }
 
-/* Адаптивность для мобильных устройств */
-@media (max-width: 600px) {
+/* Улучшения для очень маленьких экранов */
+@media (max-width: 480px) {
     body {
-        padding: 10px;
+        padding: 5px;
     }
     
     .container {
-        padding: 15px;
-        margin: 0;
-        border-radius: 0;
+        padding: 10px;
+        border-radius: 5px;
+    }
+
+    h1 {
+        font-size: 1.2em;
     }
 
     #start-screen {
-        padding: 20px 15px;
+        padding: 20px 10px;
+        margin: 10px 0;
+    }
+
+    .btn-start {
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+
+    #email-container {
+        padding: 12px;
         margin: 10px 0;
     }
 
     .answer-btn {
-        display: block;
-        width: calc(100% - 16px);
-        margin: 5px 0;
-    }
-
-    .result-actions button {
-        display: block;
-        width: 100%;
-        margin: 5px 0;
-    }
-
-    h1 {
-        font-size: 1.5em;
-    }
-
-    .form-group input {
+        padding: 12px 15px;
         font-size: 14px;
-        padding: 10px;
     }
 
-    .btn-start {
-        width: 100%;
-        padding: 12px;
-        font-size: 16px;
-    }
-
-    #email-container {
-        padding: 15px;
-        margin: 10px 0;
+    #next-btn, #restart-btn, #research-btn, #export-btn {
+        padding: 12px 15px;
+        font-size: 14px;
     }
 
     #final-score {
-        font-size: 2em;
+        font-size: 1.8em;
+    }
+
+    #personal-result {
+        padding: 12px;
+    }
+}
+
+/* Горизонтальная ориентация для мобильных */
+@media (max-width: 600px) and (orientation: landscape) {
+    .container {
+        max-width: 100%;
+        padding: 10px;
+    }
+    
+    #start-screen {
+        padding: 20px;
+    }
+    
+    .form-group {
+        margin: 15px 0;
+    }
+    
+    .answer-btn {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+}
+
+/* Улучшения для планшетов */
+@media (min-width: 601px) and (max-width: 768px) {
+    .container {
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .answer-btn {
+        width: calc(50% - 12px);
+        display: inline-block;
+        margin: 6px;
+    }
+    
+    .result-actions button {
+        width: calc(50% - 10px);
+        display: inline-block;
+        margin: 5px;
+    }
+}
+
+/* Стили для кнопок на десктопе */
+@media (min-width: 769px) {
+    .answer-btn {
+        width: auto;
+        display: inline-block;
+    }
+    
+    .result-actions button {
+        width: auto;
+        display: inline-block;
+        margin: 0 10px 10px 0;
+    }
+    
+    #next-btn, #restart-btn, #research-btn, #export-btn {
+        width: auto;
+        display: inline-block;
+        padding: 12px 25px;
     }
 }
 
@@ -386,9 +463,13 @@ input:focus {
     outline-offset: 2px;
 }
 
-/* Стили для успешного завершения теста */
-.success-message {
-    color: #28a745;
-    font-weight: bold;
-    font-size: 1.1em;
+/* Убедимся, что все кнопки кликабельны на мобильных */
+button {
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px; /* Минимальная высота для удобного касания */
+}
+
+/* Предотвращаем масштабирование при фокусе на iOS */
+input, textarea, select {
+    font-size: 16px; /* Предотвращает масштабирование в iOS */
 }
