@@ -56,6 +56,7 @@ let researchData = {
 let currentEmailIndex = 0;
 let score = 0;
 let totalQuestions = 0;
+let questionStartTime = new Date();
 
 // Элементы страницы
 const startScreen = document.getElementById('start-screen');
@@ -106,6 +107,7 @@ function loadEmail(index) {
     emailContent.innerHTML = email.content;
     resetButtons();
     feedback.classList.add('hidden');
+    questionStartTime = new Date();
 }
 
 // Запись результата в базу данных
@@ -458,4 +460,5 @@ function init() {
 
 // Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', init);
+
 
