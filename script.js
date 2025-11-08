@@ -296,7 +296,7 @@ function checkAnswer(userAnswer) {
     console.log(`Ответ на письмо ${currentEmailIndex + 1}. Всего писем: ${emails.length}`);
 }
 
-// Анализ результатов - УПРОЩЕННАЯ ФУНКЦИЯ
+// Анализ результатов - ПРАВИЛЬНАЯ ФУНКЦИЯ
 function analyzeResearchData() {
     const results = researchData.results;
     const total = results.length;
@@ -306,29 +306,32 @@ function analyzeResearchData() {
     const correctAnswers = results.filter(r => r.isCorrect).length;
     const successRate = Math.round((correctAnswers / total) * 100);
     
-    // Находим самое сложное письмо на основе предустановленных уровней
+    // Находим все неправильно отвеченные письма
+    const wrongAnswers = results.filter(r => !r.isCorrect);
+    
     let hardestEmail = null;
     
-    // Сначала ищем письма с уровнем "hard", на которые был дан неправильный ответ
-    const wrongHardEmails = results.filter(r => !r.isCorrect && r.difficulty === "hard");
-    if (wrongHardEmails.length > 0) {
-        // Берем первое письмо с уровнем "hard", на которое ответили неправильно
+    if (wrongAnswers.length > 0) {
+        // Если есть неправильные ответы - выбираем случайное из них
+        const randomWrongAnswer = wrongAnswers[Math.floor(Math.random() * wrongAnswers.length)];
         hardestEmail = {
-            subject: wrongHardEmails[0].emailSubject,
+            subject: randomWrongAnswer.emailSubject,
             successRate: 0
         };
     } else {
-        // Если нет неправильных ответов на "hard", ищем любые письма с уровнем "hard"
+        // Если все ответы правильные - выбираем случайное письмо с уровнем "hard"
         const hardEmails = emails.filter(email => email.difficulty === "hard");
         if (hardEmails.length > 0) {
+            const randomHardEmail = hardEmails[Math.floor(Math.random() * hardEmails.length)];
             hardestEmail = {
-                subject: hardEmails[0].subject,
+                subject: randomHardEmail.subject,
                 successRate: 100
             };
         } else {
-            // Если нет писем "hard", берем первое письмо
+            // Если нет писем "hard" - выбираем случайное письмо
+            const randomEmail = emails[Math.floor(Math.random() * emails.length)];
             hardestEmail = {
-                subject: emails[0].subject,
+                subject: randomEmail.subject,
                 successRate: 100
             };
         }
