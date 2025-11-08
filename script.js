@@ -686,19 +686,19 @@ function restoreState() {
             gameScreen.classList.remove('hidden');
             pointsDisplay.textContent = researchData.score;
             
-            // Определяем, какое письмо загружать
-            let emailToLoad = researchData.currentEmailIndex;
-            
-            // Проверяем, ответил ли пользователь на текущее письмо
-            const currentEmailId = emails[researchData.currentEmailIndex]?.id;
-            const hasAnsweredCurrent = researchData.results.some(result => result.emailId === currentEmailId);
-            
-            if (researchData.currentState === 'showing_feedback' && hasAnsweredCurrent) {
-                // Восстанавливаем состояние фидбека
+            // Загружаем правильное письмо в зависимости от состояния
+            if (researchData.currentState === 'showing_feedback') {
+                // Показываем фидбек для текущего письма
                 const email = emails[researchData.currentEmailIndex];
                 const userResult = researchData.results.find(r => r.emailId === email.id);
                 
+                // Загружаем контент письма
+                emailSender.textContent = email.sender;
+                emailSubject.textContent = email.subject;
+                emailContent.innerHTML = email.content;
+                
                 if (userResult) {
+                    // Восстанавливаем состояние кнопок и фидбека
                     answerButtons.forEach(btn => {
                         btn.disabled = true;
                         btn.classList.add('disabled');
@@ -734,8 +734,8 @@ function restoreState() {
                     feedback.classList.remove('hidden');
                 }
             } else {
-                // Загружаем текущее письмо
-                loadEmail(emailToLoad);
+                // Загружаем следующее неотвеченное письмо
+                loadEmail(researchData.currentEmailIndex);
             }
         } else {
             // Начинаем новый тест
