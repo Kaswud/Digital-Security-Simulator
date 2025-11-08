@@ -397,11 +397,18 @@ async function copyResultsToClipboard() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
+    // Добавляем расчет времени прохождения
+    const completionTime = new Date() - researchData.startTime;
+    const minutes = Math.floor(completionTime / 60000);
+    const seconds = Math.floor((completionTime % 60000) / 1000);
+    const timeString = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
+    
     const text = `Результаты теста по кибербезопасности
 ─────────────────────────────
 👤 Участник: ${userName}
 🆔 ID: ${analysis.participantId}
 📅 Дата: ${new Date().toLocaleDateString('ru-RU')}
+⏱️ Время прохождения: ${timeString}
 
 🎯 Результат: ${analysis.correctAnswers} из ${analysis.totalQuestions}
 📈 Процент правильных: ${analysis.successRate}%
@@ -610,3 +617,4 @@ function init() {
 
 // Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', init);
+
