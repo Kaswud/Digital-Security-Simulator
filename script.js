@@ -151,15 +151,16 @@ let researchData = {
     participantId: generateId(),
     userName: '',
     startTime: new Date(),
-    endTime: null, // Добавляем время окончания
+    endTime: null,
     results: [],
-    group: getRandomGroup()
+    group: getRandomGroup(),
+    analysis: null // Добавляем поле для сохранения анализа
 };
 
 let currentEmailIndex = 0;
 let score = 0;
 let totalQuestions = 0;
-let emailStartTimes = []; // Массив для хранения времени начала каждого вопроса
+let emailStartTimes = [];
 
 // Элементы страницы
 const startScreen = document.getElementById('start-screen');
@@ -211,11 +212,7 @@ function loadEmail(index) {
     resetButtons();
     feedback.classList.add('hidden');
     
-    // Записываем время начала показа этого письма
     emailStartTimes[index] = new Date();
-    
-    // Добавляем отладку
-    console.log(`Загружено письмо ${index + 1} из ${emails.length}: ${email.subject}`);
 }
 
 // Запись результата в базу данных
@@ -241,7 +238,6 @@ function checkAnswer(userAnswer) {
     const answerTime = new Date();
     const emailIndex = currentEmailIndex;
     
-    // Получаем время начала для текущего письма
     const startTime = emailStartTimes[emailIndex];
     let timeSpent = 0;
     
@@ -292,13 +288,15 @@ function checkAnswer(userAnswer) {
     explanation.textContent = email.explanation;
     feedback.classList.remove('hidden');
     pointsDisplay.textContent = score;
-    
-    // Отладка
-    console.log(`Ответ на письмо ${currentEmailIndex + 1}. Всего писем: ${emails.length}`);
 }
 
-// Анализ результатов - ПРАВИЛЬНАЯ ФУНКЦИЯ
+// Анализ результатов - ТЕПЕРЬ СОХРАНЯЕТ РЕЗУЛЬТАТ
 function analyzeResearchData() {
+    // Если анализ уже был сохранен - возвращаем его
+    if (researchData.analysis) {
+        return researchData.analysis;
+    }
+    
     const results = researchData.results;
     const total = results.length;
     
@@ -342,7 +340,8 @@ function analyzeResearchData() {
     const validTimes = results.filter(r => r.timeSpent > 0).map(r => r.timeSpent);
     const averageTime = validTimes.length > 0 ? Math.round(validTimes.reduce((sum, time) => sum + time, 0) / validTimes.length) : 0;
     
-    return {
+    // Сохраняем анализ в researchData
+    researchData.analysis = {
         participantId: researchData.participantId,
         userName: researchData.userName,
         group: researchData.group,
@@ -353,14 +352,17 @@ function analyzeResearchData() {
         averageTimeSeconds: (averageTime / 1000).toFixed(1),
         hardestEmail: hardestEmail
     };
+    
+    localStorage.setItem('researchData', JSON.stringify(researchData));
+    
+    return researchData.analysis;
 }
 
 // Показать детальные результаты
 function showDetailedResults() {
-    const analysis = analyzeResearchData();
+    const analysis = analyzeResearchData(); // Теперь всегда возвращает одинаковый результат
     const userName = researchData.userName || 'Участник';
     
-    // Используем сохраненное время окончания
     const endTime = researchData.endTime || new Date();
     const completionTime = endTime - researchData.startTime;
     const minutes = Math.floor(completionTime / 60000);
@@ -381,10 +383,6 @@ function showDetailedResults() {
             <p><strong>🏆 Уровень подготовки:</strong> ${getSkillLevel(analysis.successRate)}</p>
         </div>
     `;
-    
-    // Отладка
-    console.log(`Показаны результаты: ${analysis.correctAnswers} из ${analysis.totalQuestions}`);
-    console.log(`Самое сложное письмо: "${analysis.hardestEmail.subject}"`);
 }
 
 // Определение уровня навыков
@@ -398,10 +396,9 @@ function getSkillLevel(percentage) {
 
 // Копирование результатов в буфер обмена
 async function copyResultsToClipboard() {
-    const analysis = analyzeResearchData();
+    const analysis = analyzeResearchData(); // Теперь всегда одинаковый результат
     const userName = researchData.userName || 'Участник';
     
-    // Используем сохраненное время окончания или текущее время как fallback
     const endTime = researchData.endTime || new Date();
     const completionTime = endTime - researchData.startTime;
     const minutes = Math.floor(completionTime / 60000);
@@ -426,10 +423,7 @@ async function copyResultsToClipboard() {
     try {
         await navigator.clipboard.writeText(text);
         
-        // Показываем сообщение об успехе
         copyMessage.classList.remove('hidden');
-        
-        // Скрываем сообщение через 3 секунды
         setTimeout(() => {
             copyMessage.classList.add('hidden');
         }, 3000);
@@ -442,10 +436,9 @@ async function copyResultsToClipboard() {
 
 // Сохранение результатов в файл
 function saveResultsToFile() {
-    const analysis = analyzeResearchData();
+    const analysis = analyzeResearchData(); // Теперь всегда одинаковый результат
     const userName = researchData.userName || 'Участник';
     
-    // Используем сохраненное время окончания
     const endTime = researchData.endTime || new Date();
     const completionTime = endTime - researchData.startTime;
     const minutes = Math.floor(completionTime / 60000);
@@ -481,7 +474,6 @@ ${emails.map((email, index) => {
     return `${index + 1}. "${email.subject}": ${userResult ? (userResult.isCorrect ? 'Правильно ✓' : 'Неправильно ✗') : 'Не отвечено'}`;
 }).join('\n')}`;
 
-    // Создаем и скачиваем файл
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -516,12 +508,9 @@ function getRecommendation(percentage) {
 function nextEmail() {
     currentEmailIndex++;
     
-    console.log(`Текущий индекс: ${currentEmailIndex}, Всего писем: ${emails.length}`);
-    
     if (currentEmailIndex < emails.length) {
         loadEmail(currentEmailIndex);
     } else {
-        console.log('Тест завершен! Показываем результаты...');
         showResults();
     }
 }
@@ -533,8 +522,9 @@ function showResults() {
     finalScore.textContent = score;
     totalQuestionsDisplay.textContent = totalQuestions;
     
-    // Сохраняем время окончания теста
     researchData.endTime = new Date();
+    // Вызываем анализ и сохраняем результат
+    analyzeResearchData();
     localStorage.setItem('researchData', JSON.stringify(researchData));
     
     showDetailedResults();
@@ -546,21 +536,20 @@ function restartGame() {
     score = 0;
     totalQuestions = 0;
     pointsDisplay.textContent = score;
-    emailStartTimes = []; // Очищаем массив времени
+    emailStartTimes = [];
     
     researchData = {
         participantId: generateId(),
-        userName: researchData.userName, // Сохраняем имя
+        userName: researchData.userName,
         startTime: new Date(),
-        endTime: null, // Сбрасываем время окончания
+        endTime: null,
         results: [],
-        group: getRandomGroup()
+        group: getRandomGroup(),
+        analysis: null // Сбрасываем анализ
     };
     
     resultsScreen.classList.add('hidden');
     startScreen.classList.remove('hidden');
-    
-    console.log('Игра перезапущена');
 }
 
 // Обработчик отправки формы
@@ -571,14 +560,11 @@ function handleFormSubmit(event) {
     if (userName) {
         researchData.userName = userName;
         localStorage.setItem('researchData', JSON.stringify(researchData));
-        emailStartTimes = []; // Инициализируем массив времени
+        emailStartTimes = [];
         
         startScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
         loadEmail(currentEmailIndex);
-        
-        console.log(`Тест начат для пользователя: ${userName}`);
-        console.log(`Всего писем в тесте: ${emails.length}`);
     } else {
         alert('Пожалуйста, введите ваше имя.');
     }
@@ -590,6 +576,7 @@ function loadSavedData() {
     if (saved) {
         const savedData = JSON.parse(saved);
         researchData.userName = savedData.userName || '';
+        researchData.analysis = savedData.analysis || null; // Загружаем сохраненный анализ
         if (researchData.userName) {
             userNameInput.value = researchData.userName;
         }
@@ -615,21 +602,16 @@ function setupResultButtons() {
 function init() {
     loadSavedData();
     
-    // Назначаем обработчики
     userForm.addEventListener('submit', handleFormSubmit);
     answerButtons[0].addEventListener('click', () => checkAnswer(false));
     answerButtons[1].addEventListener('click', () => checkAnswer(true));
     nextButton.addEventListener('click', nextEmail);
     
-    // Назначаем обработчики для кнопок результатов
     setupResultButtons();
     
-    // Показываем стартовый экран
     startScreen.classList.remove('hidden');
     gameScreen.classList.add('hidden');
     resultsScreen.classList.add('hidden');
-    
-    console.log(`Тренажер инициализирован. Всего писем: ${emails.length}`);
 }
 
 // Запуск при загрузке страницы
