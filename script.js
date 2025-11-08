@@ -221,6 +221,9 @@ function loadEmail(index) {
 function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
     const email = emails[emailIndex];
     
+    // Удаляем предыдущий результат для этого письма, если он есть
+    researchData.results = researchData.results.filter(result => result.emailId !== email.id);
+    
     researchData.results.push({
         emailId: email.id,
         emailSubject: email.subject,
@@ -251,13 +254,8 @@ function checkAnswer(userAnswer) {
     const email = emails[emailIndex];
     const isCorrect = (userAnswer === email.isPhishing);
     
-    // Увеличиваем счетчики только если это новое письмо, на которое еще не отвечали
-    if (!researchData.results.some(result => result.emailId === email.id)) {
-        totalQuestions++;
-        if (isCorrect) {
-            score++;
-        }
-    }
+    // Обновляем счетчики на основе всех результатов
+    updateCounters();
     
     recordResult(emailIndex, userAnswer, isCorrect, timeSpent);
     
@@ -300,6 +298,13 @@ function checkAnswer(userAnswer) {
     // Отладка
     console.log(`Ответ на письмо ${currentEmailIndex + 1}. Всего писем: ${emails.length}`);
     console.log(`Текущий счет: ${score} из ${totalQuestions}`);
+}
+
+// Обновление счетчиков на основе всех результатов
+function updateCounters() {
+    const results = researchData.results;
+    totalQuestions = results.length;
+    score = results.filter(r => r.isCorrect).length;
 }
 
 // Анализ результатов
@@ -552,21 +557,9 @@ function handleFormSubmit(event) {
     
     const userName = userNameInput.value.trim();
     if (userName) {
-        // Сбрасываем счетчики при начале новой игры
-        score = 0;
-        totalQuestions = 0;
-        currentEmailIndex = 0;
-        emailStartTimes = [];
-        
-        researchData = {
-            participantId: generateId(),
-            userName: userName,
-            startTime: new Date(),
-            results: [],
-            group: getRandomGroup()
-        };
-        
+        researchData.userName = userName;
         localStorage.setItem('researchData', JSON.stringify(researchData));
+        emailStartTimes = []; // Инициализируем массив времени
         
         startScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
@@ -579,24 +572,55 @@ function handleFormSubmit(event) {
     }
 }
 
-// Загрузка сохраненных данных
+// Загрузка сохраненных данных и восстановление состояния
 function loadSavedData() {
     const saved = localStorage.getItem('researchData');
     if (saved) {
         const savedData = JSON.parse(saved);
+        
+        // Восстанавливаем данные исследования
+        researchData.participantId = savedData.participantId || generateId();
         researchData.userName = savedData.userName || '';
+        researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : new Date();
+        researchData.results = savedData.results || [];
+        researchData.group = savedData.group || getRandomGroup();
+        
         if (researchData.userName) {
             userNameInput.value = researchData.userName;
         }
         
-        // Если есть сохраненные результаты, сбрасываем счетчики
-        if (savedData.results && savedData.results.length > 0) {
-            score = 0;
-            totalQuestions = 0;
-            currentEmailIndex = 0;
-            emailStartTimes = [];
+        // Восстанавливаем счетчики
+        updateCounters();
+        
+        // Определяем текущий индекс письма
+        if (researchData.results.length > 0) {
+            // Находим последнее отвеченное письмо
+            const answeredEmailIds = researchData.results.map(r => r.emailId);
+            let lastAnsweredIndex = -1;
+            
+            for (let i = 0; i < emails.length; i++) {
+                if (answeredEmailIds.includes(emails[i].id)) {
+                    lastAnsweredIndex = i;
+                }
+            }
+            
+            // Устанавливаем следующий индекс после последнего отвеченного
+            currentEmailIndex = lastAnsweredIndex + 1;
+            
+            // Если все письма отвечены, показываем результаты
+            if (currentEmailIndex >= emails.length) {
+                showResults();
+                return 'results';
+            } else {
+                // Если тест в процессе, показываем игровой экран
+                startScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                loadEmail(currentEmailIndex);
+                return 'game';
+            }
         }
     }
+    return 'start';
 }
 
 // Назначение обработчиков для кнопок результатов
@@ -616,7 +640,7 @@ function setupResultButtons() {
 
 // Инициализация
 function init() {
-    loadSavedData();
+    const state = loadSavedData();
     
     // Назначаем обработчики
     userForm.addEventListener('submit', handleFormSubmit);
@@ -627,12 +651,16 @@ function init() {
     // Назначаем обработчики для кнопок результатов
     setupResultButtons();
     
-    // Показываем стартовый экран
-    startScreen.classList.remove('hidden');
-    gameScreen.classList.add('hidden');
-    resultsScreen.classList.add('hidden');
+    // Если не восстанавливаем состояние, показываем стартовый экран
+    if (state === 'start') {
+        startScreen.classList.remove('hidden');
+        gameScreen.classList.add('hidden');
+        resultsScreen.classList.add('hidden');
+    }
     
     console.log(`Тренажер инициализирован. Всего писем: ${emails.length}`);
+    console.log(`Текущее состояние: ${state}`);
+    console.log(`Текущий счет: ${score} из ${totalQuestions}`);
 }
 
 // Запуск при загрузке страницы
