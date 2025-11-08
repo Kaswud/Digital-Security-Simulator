@@ -159,6 +159,7 @@ let researchData = {
     score: 0,
     totalQuestions: 0,
     testStarted: false,
+    testCompleted: false,
     currentState: 'start'
 };
 
@@ -235,27 +236,38 @@ function loadSavedData() {
         try {
             const savedData = JSON.parse(saved);
             
+            // Восстанавливаем только основные данные, сбрасываем состояние теста
             researchData.participantId = savedData.participantId || generateId();
             researchData.userName = savedData.userName || '';
-            researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : new Date();
+            researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : null;
             researchData.endTime = savedData.endTime ? new Date(savedData.endTime) : null;
             researchData.results = savedData.results || [];
             researchData.group = savedData.group || getRandomGroup();
             researchData.analysis = savedData.analysis || null;
-            researchData.currentEmailIndex = savedData.currentEmailIndex || 0;
-            researchData.score = savedData.score || 0;
-            researchData.totalQuestions = savedData.totalQuestions || 0;
-            researchData.testStarted = savedData.testStarted || false;
-            researchData.currentState = savedData.currentState || 'start';
+            
+            // Сбрасываем состояние теста, если он не был завершен
+            if (savedData.testCompleted) {
+                researchData.testStarted = false;
+                researchData.testCompleted = true;
+                researchData.currentEmailIndex = 0;
+                researchData.score = savedData.score || 0;
+                researchData.totalQuestions = savedData.totalQuestions || 0;
+                researchData.currentState = 'completed';
+            } else {
+                researchData.testStarted = false; // Всегда сбрасываем начатое состояние
+                researchData.testCompleted = false;
+                researchData.currentEmailIndex = 0;
+                researchData.score = 0;
+                researchData.totalQuestions = 0;
+                researchData.currentState = 'start';
+            }
             
             if (researchData.userName) {
                 userNameInput.value = researchData.userName;
             }
             
             console.log('Данные загружены:', {
-                testStarted: researchData.testStarted,
-                currentState: researchData.currentState,
-                currentEmailIndex: researchData.currentEmailIndex,
+                testCompleted: researchData.testCompleted,
                 resultsCount: researchData.results.length,
                 score: researchData.score,
                 totalQuestions: researchData.totalQuestions
@@ -371,10 +383,6 @@ function checkAnswer(userAnswer) {
 
 // Анализ результатов
 function analyzeResearchData() {
-    if (researchData.analysis) {
-        return researchData.analysis;
-    }
-    
     const results = researchData.results;
     const total = results.length;
     
@@ -391,22 +399,19 @@ function analyzeResearchData() {
     if (wrongAnswers.length > 0) {
         const randomWrongAnswer = wrongAnswers[Math.floor(Math.random() * wrongAnswers.length)];
         hardestEmail = {
-            subject: randomWrongAnswer.emailSubject,
-            successRate: 0
+            subject: randomWrongAnswer.emailSubject
         };
     } else {
         const hardEmails = emails.filter(email => email.difficulty === "hard");
         if (hardEmails.length > 0) {
             const randomHardEmail = hardEmails[Math.floor(Math.random() * hardEmails.length)];
             hardestEmail = {
-                subject: randomHardEmail.subject,
-                successRate: 100
+                subject: randomHardEmail.subject
             };
         } else {
             const randomEmail = emails[Math.floor(Math.random() * emails.length)];
             hardestEmail = {
-                subject: randomEmail.subject,
-                successRate: 100
+                subject: randomEmail.subject
             };
         }
     }
@@ -414,7 +419,14 @@ function analyzeResearchData() {
     const validTimes = results.filter(r => r.timeSpent > 0).map(r => r.timeSpent);
     const averageTime = validTimes.length > 0 ? Math.round(validTimes.reduce((sum, time) => sum + time, 0) / validTimes.length) : 0;
     
-    researchData.analysis = {
+    // Время прохождения
+    const endTime = researchData.endTime || new Date();
+    const startTime = researchData.startTime || new Date();
+    const completionTime = endTime - startTime;
+    const minutes = Math.max(0, Math.floor(completionTime / 60000));
+    const seconds = Math.max(0, Math.floor((completionTime % 60000) / 1000));
+    
+    return {
         participantId: researchData.participantId,
         userName: researchData.userName,
         group: researchData.group,
@@ -423,12 +435,11 @@ function analyzeResearchData() {
         successRate: successRate,
         averageTime: averageTime,
         averageTimeSeconds: (averageTime / 1000).toFixed(1),
-        hardestEmail: hardestEmail
+        hardestEmail: hardestEmail,
+        completionTime: completionTime,
+        minutes: minutes,
+        seconds: seconds
     };
-    
-    saveResearchData();
-    
-    return researchData.analysis;
 }
 
 // Показать детальные результаты
@@ -436,18 +447,13 @@ function showDetailedResults() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
-    const endTime = researchData.endTime || new Date();
-    const completionTime = endTime - researchData.startTime;
-    const minutes = Math.floor(completionTime / 60000);
-    const seconds = Math.floor((completionTime % 60000) / 1000);
-    
     personalResult.innerHTML = `
         <div class="result-card">
             <h3>📊 Детальные результаты</h3>
             <p><strong>👤 Имя участника:</strong> ${userName}</p>
             <p><strong>🆔 ID тестирования:</strong> ${analysis.participantId}</p>
             <p><strong>📅 Дата прохождения:</strong> ${new Date().toLocaleDateString('ru-RU')}</p>
-            <p><strong>⏱️ Время прохождения:</strong> ${minutes} мин ${seconds} сек</p>
+            <p><strong>⏱️ Время прохождения:</strong> ${analysis.minutes} мин ${analysis.seconds} сек</p>
             
             <p><strong>🎯 Правильных ответов:</strong> ${analysis.correctAnswers} из ${analysis.totalQuestions}</p>
             <p><strong>📈 Процент правильных:</strong> ${analysis.successRate}%</p>
@@ -460,7 +466,7 @@ function showDetailedResults() {
     console.log('Показаны результаты:', {
         correctAnswers: analysis.correctAnswers,
         totalQuestions: analysis.totalQuestions,
-        score: researchData.score
+        time: `${analysis.minutes} мин ${analysis.seconds} сек`
     });
 }
 
@@ -478,18 +484,12 @@ async function copyResultsToClipboard() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
-    const endTime = researchData.endTime || new Date();
-    const completionTime = endTime - researchData.startTime;
-    const minutes = Math.floor(completionTime / 60000);
-    const seconds = Math.floor((completionTime % 60000) / 1000);
-    const timeString = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
-    
     const text = `Результаты теста по кибербезопасности
 ─────────────────────────────
 👤 Участник: ${userName}
 🆔 ID: ${analysis.participantId}
 📅 Дата: ${new Date().toLocaleDateString('ru-RU')}
-⏱️ Время прохождения: ${timeString}
+⏱️ Время прохождения: ${analysis.minutes} мин ${analysis.seconds} сек
 
 🎯 Результат: ${analysis.correctAnswers} из ${analysis.totalQuestions}
 📈 Процент правильных: ${analysis.successRate}%
@@ -518,18 +518,12 @@ function saveResultsToFile() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
-    const endTime = researchData.endTime || new Date();
-    const completionTime = endTime - researchData.startTime;
-    const minutes = Math.floor(completionTime / 60000);
-    const seconds = Math.floor((completionTime % 60000) / 1000);
-    const timeString = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
-    
     const text = `Результаты теста по кибербезопасности
 =================================
 Участник: ${userName}
 ID тестирования: ${analysis.participantId}
 Дата прохождения: ${new Date().toLocaleDateString('ru-RU')}
-Время прохождения: ${timeString}
+Время прохождения: ${analysis.minutes} мин ${analysis.seconds} сек
 
 ОБЩИЕ РЕЗУЛЬТАТЫ:
 -----------------
@@ -603,8 +597,8 @@ function showResults() {
     
     researchData.endTime = new Date();
     researchData.testStarted = false;
+    researchData.testCompleted = true;
     researchData.currentState = 'completed';
-    analyzeResearchData();
     saveResearchData();
     
     showDetailedResults();
@@ -612,6 +606,7 @@ function showResults() {
 
 // Перезапуск игры
 function restartGame() {
+    // Полностью сбрасываем все данные
     researchData = {
         participantId: generateId(),
         userName: researchData.userName,
@@ -624,6 +619,7 @@ function restartGame() {
         score: 0,
         totalQuestions: 0,
         testStarted: false,
+        testCompleted: false,
         currentState: 'start'
     };
     
@@ -640,15 +636,22 @@ function handleFormSubmit(event) {
     
     const userName = userNameInput.value.trim();
     if (userName) {
-        researchData.userName = userName;
-        researchData.participantId = generateId();
-        researchData.startTime = new Date();
-        researchData.group = getRandomGroup();
-        researchData.testStarted = true;
-        researchData.currentEmailIndex = 0;
-        researchData.score = 0;
-        researchData.totalQuestions = 0;
-        researchData.currentState = 'answering';
+        // Полностью сбрасываем данные для нового теста
+        researchData = {
+            participantId: generateId(),
+            userName: userName,
+            startTime: new Date(),
+            endTime: null,
+            results: [],
+            group: getRandomGroup(),
+            analysis: null,
+            currentEmailIndex: 0,
+            score: 0,
+            totalQuestions: 0,
+            testStarted: true,
+            testCompleted: false,
+            currentState: 'answering'
+        };
         
         saveResearchData();
         emailStartTimes = [];
@@ -667,89 +670,45 @@ function restoreState() {
     
     console.log('Восстановление состояния:', {
         hasSavedData,
-        testStarted: researchData.testStarted,
-        currentState: researchData.currentState,
-        currentEmailIndex: researchData.currentEmailIndex,
-        resultsCount: researchData.results.length,
-        score: researchData.score,
-        totalQuestions: researchData.totalQuestions
+        testCompleted: researchData.testCompleted,
+        resultsCount: researchData.results.length
     });
     
-    if (hasSavedData && researchData.testStarted) {
-        if (researchData.endTime) {
-            // Тест завершен - показываем результаты
-            console.log('Тест завершен, показываем результаты');
-            startScreen.classList.add('hidden');
-            gameScreen.classList.add('hidden');
-            resultsScreen.classList.remove('hidden');
-            finalScore.textContent = researchData.score;
-            totalQuestionsDisplay.textContent = researchData.totalQuestions;
-            showDetailedResults();
-        } else {
-            // Тест в процессе - продолжаем
-            console.log('Тест в процессе, продолжаем с письма:', researchData.currentEmailIndex + 1);
-            startScreen.classList.add('hidden');
-            gameScreen.classList.remove('hidden');
-            pointsDisplay.textContent = researchData.score;
-            
-            let emailToLoad = researchData.currentEmailIndex;
-            
-            if (researchData.currentState === 'showing_feedback') {
-                const currentEmailId = emails[researchData.currentEmailIndex].id;
-                const hasAnswered = researchData.results.some(result => result.emailId === currentEmailId);
-                
-                if (hasAnswered) {
-                    emailToLoad = researchData.currentEmailIndex;
-                    const email = emails[researchData.currentEmailIndex];
-                    const userResult = researchData.results.find(r => r.emailId === email.id);
-                    
-                    if (userResult) {
-                        answerButtons.forEach(btn => {
-                            btn.disabled = true;
-                            btn.classList.add('disabled');
-                            
-                            const isRealButton = btn.getAttribute('data-answer') === 'real';
-                            const isUserChoice = (isRealButton && userResult.userAnswer === false) || (!isRealButton && userResult.userAnswer === true);
-                            
-                            if (isUserChoice) {
-                                btn.classList.add('user-choice');
-                                if (userResult.isCorrect) {
-                                    btn.classList.add('correct');
-                                } else {
-                                    btn.classList.add('incorrect');
-                                }
-                            }
-                            
-                            if ((isRealButton && !email.isPhishing) || (!isRealButton && email.isPhishing)) {
-                                btn.classList.add('correct-answer');
-                            }
-                        });
-                        
-                        if (userResult.isCorrect) {
-                            resultText.textContent = "Правильно! 🎉";
-                            feedback.classList.add('good');
-                            feedback.classList.remove('bad');
-                        } else {
-                            resultText.textContent = "Неправильно! 😔";
-                            feedback.classList.add('bad');
-                            feedback.classList.remove('good');
-                        }
-                        
-                        explanation.textContent = email.explanation;
-                        feedback.classList.remove('hidden');
-                    }
-                } else {
-                    emailToLoad = researchData.currentEmailIndex;
-                }
-            }
-            
-            loadEmail(emailToLoad);
-        }
+    if (hasSavedData && researchData.testCompleted) {
+        // Показываем результаты завершенного теста
+        console.log('Показываем результаты завершенного теста');
+        startScreen.classList.add('hidden');
+        gameScreen.classList.add('hidden');
+        resultsScreen.classList.remove('hidden');
+        finalScore.textContent = researchData.score;
+        totalQuestionsDisplay.textContent = researchData.totalQuestions;
+        showDetailedResults();
     } else {
+        // Всегда начинаем с начала
         console.log('Начинаем новый тест');
         startScreen.classList.remove('hidden');
         gameScreen.classList.add('hidden');
         resultsScreen.classList.add('hidden');
+        
+        // Очищаем старые данные если они есть
+        if (hasSavedData && !researchData.testCompleted) {
+            researchData = {
+                participantId: generateId(),
+                userName: researchData.userName,
+                startTime: null,
+                endTime: null,
+                results: [],
+                group: getRandomGroup(),
+                analysis: null,
+                currentEmailIndex: 0,
+                score: 0,
+                totalQuestions: 0,
+                testStarted: false,
+                testCompleted: false,
+                currentState: 'start'
+            };
+            saveResearchData();
+        }
     }
 }
 
