@@ -158,7 +158,9 @@ let researchData = {
     currentEmailIndex: 0,
     score: 0,
     totalQuestions: 0,
-    testStarted: false
+    testStarted: false,
+    // Добавляем поле для отслеживания текущего состояния
+    currentState: 'start' // 'start', 'answering', 'showing_feedback', 'completed'
 };
 
 let emailStartTimes = [];
@@ -217,7 +219,10 @@ function loadEmail(index) {
     
     // Сохраняем текущий прогресс
     researchData.currentEmailIndex = index;
+    researchData.currentState = 'answering';
     saveResearchData();
+    
+    console.log(`Загружено письмо ${index + 1}: ${email.subject}, состояние: ${researchData.currentState}`);
 }
 
 // Сохранение данных исследования
@@ -229,26 +234,39 @@ function saveResearchData() {
 function loadSavedData() {
     const saved = localStorage.getItem('researchData');
     if (saved) {
-        const savedData = JSON.parse(saved);
-        
-        // Восстанавливаем все данные
-        researchData.participantId = savedData.participantId || generateId();
-        researchData.userName = savedData.userName || '';
-        researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : new Date();
-        researchData.endTime = savedData.endTime ? new Date(savedData.endTime) : null;
-        researchData.results = savedData.results || [];
-        researchData.group = savedData.group || getRandomGroup();
-        researchData.analysis = savedData.analysis || null;
-        researchData.currentEmailIndex = savedData.currentEmailIndex || 0;
-        researchData.score = savedData.score || 0;
-        researchData.totalQuestions = savedData.totalQuestions || 0;
-        researchData.testStarted = savedData.testStarted || false;
-        
-        if (researchData.userName) {
-            userNameInput.value = researchData.userName;
+        try {
+            const savedData = JSON.parse(saved);
+            
+            // Восстанавливаем все данные
+            researchData.participantId = savedData.participantId || generateId();
+            researchData.userName = savedData.userName || '';
+            researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : new Date();
+            researchData.endTime = savedData.endTime ? new Date(savedData.endTime) : null;
+            researchData.results = savedData.results || [];
+            researchData.group = savedData.group || getRandomGroup();
+            researchData.analysis = savedData.analysis || null;
+            researchData.currentEmailIndex = savedData.currentEmailIndex || 0;
+            researchData.score = savedData.score || 0;
+            researchData.totalQuestions = savedData.totalQuestions || 0;
+            researchData.testStarted = savedData.testStarted || false;
+            researchData.currentState = savedData.currentState || 'start';
+            
+            if (researchData.userName) {
+                userNameInput.value = researchData.userName;
+            }
+            
+            console.log('Данные загружены:', {
+                testStarted: researchData.testStarted,
+                currentState: researchData.currentState,
+                currentEmailIndex: researchData.currentEmailIndex,
+                resultsCount: researchData.results.length
+            });
+            
+            return true;
+        } catch (e) {
+            console.error('Ошибка загрузки данных:', e);
+            return false;
         }
-        
-        return true;
     }
     return false;
 }
@@ -329,6 +347,8 @@ function checkAnswer(userAnswer) {
     feedback.classList.remove('hidden');
     pointsDisplay.textContent = researchData.score;
     
+    // Меняем состояние на "показ фидбека"
+    researchData.currentState = 'showing_feedback';
     saveResearchData();
 }
 
@@ -560,6 +580,7 @@ function showResults() {
     
     researchData.endTime = new Date();
     researchData.testStarted = false;
+    researchData.currentState = 'completed';
     analyzeResearchData();
     saveResearchData();
     
@@ -579,7 +600,8 @@ function restartGame() {
         currentEmailIndex: 0,
         score: 0,
         totalQuestions: 0,
-        testStarted: false
+        testStarted: false,
+        currentState: 'start'
     };
     
     emailStartTimes = [];
@@ -603,6 +625,7 @@ function handleFormSubmit(event) {
         researchData.currentEmailIndex = 0;
         researchData.score = 0;
         researchData.totalQuestions = 0;
+        researchData.currentState = 'answering';
         
         saveResearchData();
         emailStartTimes = [];
@@ -619,10 +642,18 @@ function handleFormSubmit(event) {
 function restoreState() {
     const hasSavedData = loadSavedData();
     
+    console.log('Восстановление состояния:', {
+        hasSavedData,
+        testStarted: researchData.testStarted,
+        currentState: researchData.currentState,
+        currentEmailIndex: researchData.currentEmailIndex,
+        resultsCount: researchData.results.length
+    });
+    
     if (hasSavedData && researchData.testStarted) {
-        // Если тест был начат, продолжаем с того же места
         if (researchData.endTime) {
             // Тест завершен - показываем результаты
+            console.log('Тест завершен, показываем результаты');
             startScreen.classList.add('hidden');
             gameScreen.classList.add('hidden');
             resultsScreen.classList.remove('hidden');
@@ -631,13 +662,74 @@ function restoreState() {
             showDetailedResults();
         } else {
             // Тест в процессе - продолжаем
+            console.log('Тест в процессе, продолжаем с письма:', researchData.currentEmailIndex + 1);
             startScreen.classList.add('hidden');
             gameScreen.classList.remove('hidden');
             pointsDisplay.textContent = researchData.score;
-            loadEmail(researchData.currentEmailIndex);
+            
+            // Определяем, какое письмо загружать
+            let emailToLoad = researchData.currentEmailIndex;
+            
+            // Если мы находимся в состоянии "показ фидбека", значит пользователь уже ответил на текущее письмо
+            // и нужно загрузить следующее
+            if (researchData.currentState === 'showing_feedback') {
+                // Проверяем, ответил ли пользователь на текущее письмо
+                const currentEmailId = emails[researchData.currentEmailIndex].id;
+                const hasAnswered = researchData.results.some(result => result.emailId === currentEmailId);
+                
+                if (hasAnswered) {
+                    emailToLoad = researchData.currentEmailIndex;
+                    // Показываем фидбек для текущего письма
+                    const email = emails[researchData.currentEmailIndex];
+                    const userResult = researchData.results.find(r => r.emailId === email.id);
+                    
+                    if (userResult) {
+                        // Восстанавливаем состояние фидбека
+                        answerButtons.forEach(btn => {
+                            btn.disabled = true;
+                            btn.classList.add('disabled');
+                            
+                            const isRealButton = btn.getAttribute('data-answer') === 'real';
+                            const isUserChoice = (isRealButton && userResult.userAnswer === false) || (!isRealButton && userResult.userAnswer === true);
+                            
+                            if (isUserChoice) {
+                                btn.classList.add('user-choice');
+                                if (userResult.isCorrect) {
+                                    btn.classList.add('correct');
+                                } else {
+                                    btn.classList.add('incorrect');
+                                }
+                            }
+                            
+                            if ((isRealButton && !email.isPhishing) || (!isRealButton && email.isPhishing)) {
+                                btn.classList.add('correct-answer');
+                            }
+                        });
+                        
+                        if (userResult.isCorrect) {
+                            resultText.textContent = "Правильно! 🎉";
+                            feedback.classList.add('good');
+                            feedback.classList.remove('bad');
+                        } else {
+                            resultText.textContent = "Неправильно! 😔";
+                            feedback.classList.add('bad');
+                            feedback.classList.remove('good');
+                        }
+                        
+                        explanation.textContent = email.explanation;
+                        feedback.classList.remove('hidden');
+                    }
+                } else {
+                    // Если не ответил, но состояние показывает фидбек - это ошибка, загружаем текущее письмо
+                    emailToLoad = researchData.currentEmailIndex;
+                }
+            }
+            
+            loadEmail(emailToLoad);
         }
     } else {
         // Начинаем новый тест
+        console.log('Начинаем новый тест');
         startScreen.classList.remove('hidden');
         gameScreen.classList.add('hidden');
         resultsScreen.classList.add('hidden');
