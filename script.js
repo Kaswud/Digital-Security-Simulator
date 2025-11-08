@@ -74,10 +74,10 @@ const emails = [
     {
         id: 6,
         sender: "YouTube <no-reply@youtube.com>",
-        subject: "На ваш видео поступила жалоба",
+        subject: "На ваше видео поступила жалоба",
         content: `
             <p>Здравствуйте!</p>
-            <p>На ваше видео \"Как научиться программировать\" поступила жалоба о нарушении правил сообщества.</p>
+            <p>На ваше видео "Как научиться программировать" поступила жалоба о нарушении правил сообщества.</p>
             <p>Вы можете просмотреть детали жалобы в <a href="#" onclick="return false">Панели управления YouTube</a>.</p>
             <p>Если вы считаете, что это ошибка, подайте апелляцию в течение 7 дней.</p>
         `,
@@ -148,17 +148,21 @@ const emails = [
 
 // Система сбора данных
 let researchData = {
-    participantId: generateId(),
+    participantId: '',
     userName: '',
-    startTime: new Date(),
+    startTime: null,
+    endTime: null,
     results: [],
-    group: getRandomGroup()
+    group: '',
+    analysis: null,
+    currentEmailIndex: 0,
+    score: 0,
+    totalQuestions: 0,
+    testStarted: false,
+    currentState: 'start'
 };
 
-let currentEmailIndex = 0;
-let score = 0;
-let totalQuestions = 0;
-let emailStartTimes = []; // Массив для хранения времени начала каждого вопроса
+let emailStartTimes = [];
 
 // Элементы страницы
 const startScreen = document.getElementById('start-screen');
@@ -210,11 +214,71 @@ function loadEmail(index) {
     resetButtons();
     feedback.classList.add('hidden');
     
-    // Записываем время начала показа этого письма
     emailStartTimes[index] = new Date();
     
-    // Добавляем отладку
-    console.log(`Загружено письмо ${index + 1} из ${emails.length}: ${email.subject}`);
+    researchData.currentEmailIndex = index;
+    researchData.currentState = 'answering';
+    saveResearchData();
+    
+    console.log(`Загружено письмо ${index + 1}: ${email.subject}, состояние: ${researchData.currentState}`);
+}
+
+// Сохранение данных исследования
+function saveResearchData() {
+    localStorage.setItem('researchData', JSON.stringify(researchData));
+}
+
+// Загрузка сохраненных данных
+function loadSavedData() {
+    const saved = localStorage.getItem('researchData');
+    if (saved) {
+        try {
+            const savedData = JSON.parse(saved);
+            
+            researchData.participantId = savedData.participantId || generateId();
+            researchData.userName = savedData.userName || '';
+            researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : new Date();
+            researchData.endTime = savedData.endTime ? new Date(savedData.endTime) : null;
+            researchData.results = savedData.results || [];
+            researchData.group = savedData.group || getRandomGroup();
+            researchData.analysis = savedData.analysis || null;
+            researchData.currentEmailIndex = savedData.currentEmailIndex || 0;
+            researchData.score = savedData.score || 0;
+            researchData.totalQuestions = savedData.totalQuestions || 0;
+            researchData.testStarted = savedData.testStarted || false;
+            researchData.currentState = savedData.currentState || 'start';
+            
+            if (researchData.userName) {
+                userNameInput.value = researchData.userName;
+            }
+            
+            console.log('Данные загружены:', {
+                testStarted: researchData.testStarted,
+                currentState: researchData.currentState,
+                currentEmailIndex: researchData.currentEmailIndex,
+                resultsCount: researchData.results.length,
+                score: researchData.score,
+                totalQuestions: researchData.totalQuestions
+            });
+            
+            return true;
+        } catch (e) {
+            console.error('Ошибка загрузки данных:', e);
+            return false;
+        }
+    }
+    return false;
+}
+
+// Обновление счетчиков на основе результатов
+function updateCounters() {
+    researchData.totalQuestions = researchData.results.length;
+    researchData.score = researchData.results.filter(r => r.isCorrect).length;
+    
+    console.log('Обновлены счетчики:', {
+        totalQuestions: researchData.totalQuestions,
+        score: researchData.score
+    });
 }
 
 // Запись результата в базу данных
@@ -235,15 +299,17 @@ function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
         difficulty: email.difficulty
     });
     
-    localStorage.setItem('researchData', JSON.stringify(researchData));
+    // Обновляем счетчики после добавления нового результата
+    updateCounters();
+    
+    saveResearchData();
 }
 
 // Проверка ответа
 function checkAnswer(userAnswer) {
     const answerTime = new Date();
-    const emailIndex = currentEmailIndex;
+    const emailIndex = researchData.currentEmailIndex;
     
-    // Получаем время начала для текущего письма
     const startTime = emailStartTimes[emailIndex];
     let timeSpent = 0;
     
@@ -253,9 +319,6 @@ function checkAnswer(userAnswer) {
     
     const email = emails[emailIndex];
     const isCorrect = (userAnswer === email.isPhishing);
-    
-    // Обновляем счетчики на основе всех результатов
-    updateCounters();
     
     recordResult(emailIndex, userAnswer, isCorrect, timeSpent);
     
@@ -293,22 +356,25 @@ function checkAnswer(userAnswer) {
     
     explanation.textContent = email.explanation;
     feedback.classList.remove('hidden');
-    pointsDisplay.textContent = score;
+    pointsDisplay.textContent = researchData.score;
     
-    // Отладка
-    console.log(`Ответ на письмо ${currentEmailIndex + 1}. Всего писем: ${emails.length}`);
-    console.log(`Текущий счет: ${score} из ${totalQuestions}`);
-}
-
-// Обновление счетчиков на основе всех результатов
-function updateCounters() {
-    const results = researchData.results;
-    totalQuestions = results.length;
-    score = results.filter(r => r.isCorrect).length;
+    researchData.currentState = 'showing_feedback';
+    saveResearchData();
+    
+    console.log('Ответ записан:', {
+        email: email.subject,
+        isCorrect: isCorrect,
+        currentScore: researchData.score,
+        totalQuestions: researchData.totalQuestions
+    });
 }
 
 // Анализ результатов
 function analyzeResearchData() {
+    if (researchData.analysis) {
+        return researchData.analysis;
+    }
+    
     const results = researchData.results;
     const total = results.length;
     
@@ -317,39 +383,38 @@ function analyzeResearchData() {
     const correctAnswers = results.filter(r => r.isCorrect).length;
     const successRate = Math.round((correctAnswers / total) * 100);
     
-    // Анализ по письмам
-    const emailStats = {};
-    emails.forEach(email => {
-        const emailResults = results.filter(r => r.emailId === email.id);
-        const correct = emailResults.filter(r => r.isCorrect).length;
-        const successRate = emailResults.length > 0 ? Math.round((correct / emailResults.length) * 100) : 0;
-        
-        emailStats[email.id] = {
-            subject: email.subject,
-            total: emailResults.length,
-            correct: correct,
-            successRate: successRate
+    // Находим все неправильно отвеченные письма
+    const wrongAnswers = results.filter(r => !r.isCorrect);
+    
+    let hardestEmail = null;
+    
+    if (wrongAnswers.length > 0) {
+        const randomWrongAnswer = wrongAnswers[Math.floor(Math.random() * wrongAnswers.length)];
+        hardestEmail = {
+            subject: randomWrongAnswer.emailSubject,
+            successRate: 0
         };
-    });
-    
-    // Исправляем поиск самого сложного письма
-    let hardestEmail = { successRate: 100, subject: 'Нет данных' };
-    Object.values(emailStats).forEach(stats => {
-        if (stats.total > 0 && stats.successRate < hardestEmail.successRate) {
-            hardestEmail = stats;
+    } else {
+        const hardEmails = emails.filter(email => email.difficulty === "hard");
+        if (hardEmails.length > 0) {
+            const randomHardEmail = hardEmails[Math.floor(Math.random() * hardEmails.length)];
+            hardestEmail = {
+                subject: randomHardEmail.subject,
+                successRate: 100
+            };
+        } else {
+            const randomEmail = emails[Math.floor(Math.random() * emails.length)];
+            hardestEmail = {
+                subject: randomEmail.subject,
+                successRate: 100
+            };
         }
-    });
-    
-    // Если все письма были отвечены правильно, берем первое с наименьшим процентом
-    if (hardestEmail.successRate === 100 && total > 0) {
-        hardestEmail = Object.values(emailStats)[0];
     }
     
-    // Среднее время (исключаем нулевые значения)
     const validTimes = results.filter(r => r.timeSpent > 0).map(r => r.timeSpent);
     const averageTime = validTimes.length > 0 ? Math.round(validTimes.reduce((sum, time) => sum + time, 0) / validTimes.length) : 0;
     
-    return {
+    researchData.analysis = {
         participantId: researchData.participantId,
         userName: researchData.userName,
         group: researchData.group,
@@ -358,16 +423,21 @@ function analyzeResearchData() {
         successRate: successRate,
         averageTime: averageTime,
         averageTimeSeconds: (averageTime / 1000).toFixed(1),
-        hardestEmail: hardestEmail,
-        emailStats: emailStats
+        hardestEmail: hardestEmail
     };
+    
+    saveResearchData();
+    
+    return researchData.analysis;
 }
 
 // Показать детальные результаты
 function showDetailedResults() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
-    const completionTime = new Date() - researchData.startTime;
+    
+    const endTime = researchData.endTime || new Date();
+    const completionTime = endTime - researchData.startTime;
     const minutes = Math.floor(completionTime / 60000);
     const seconds = Math.floor((completionTime % 60000) / 1000);
     
@@ -382,14 +452,16 @@ function showDetailedResults() {
             <p><strong>🎯 Правильных ответов:</strong> ${analysis.correctAnswers} из ${analysis.totalQuestions}</p>
             <p><strong>📈 Процент правильных:</strong> ${analysis.successRate}%</p>
             <p><strong>⚡ Среднее время ответа:</strong> ${analysis.averageTimeSeconds} сек</p>
-            <p><strong>🔍 Самое сложное письмо:</strong> "${analysis.hardestEmail.subject}" (${analysis.hardestEmail.successRate}% правильных)</p>
+            <p><strong>🔍 Самое сложное письмо:</strong> "${analysis.hardestEmail.subject}"</p>
             <p><strong>🏆 Уровень подготовки:</strong> ${getSkillLevel(analysis.successRate)}</p>
         </div>
     `;
     
-    // Отладка
-    console.log(`Показаны результаты: ${analysis.correctAnswers} из ${analysis.totalQuestions}`);
-    console.log(`Всего писем в базе: ${emails.length}`);
+    console.log('Показаны результаты:', {
+        correctAnswers: analysis.correctAnswers,
+        totalQuestions: analysis.totalQuestions,
+        score: researchData.score
+    });
 }
 
 // Определение уровня навыков
@@ -406,11 +478,18 @@ async function copyResultsToClipboard() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
+    const endTime = researchData.endTime || new Date();
+    const completionTime = endTime - researchData.startTime;
+    const minutes = Math.floor(completionTime / 60000);
+    const seconds = Math.floor((completionTime % 60000) / 1000);
+    const timeString = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
+    
     const text = `Результаты теста по кибербезопасности
 ─────────────────────────────
 👤 Участник: ${userName}
 🆔 ID: ${analysis.participantId}
 📅 Дата: ${new Date().toLocaleDateString('ru-RU')}
+⏱️ Время прохождения: ${timeString}
 
 🎯 Результат: ${analysis.correctAnswers} из ${analysis.totalQuestions}
 📈 Процент правильных: ${analysis.successRate}%
@@ -423,10 +502,7 @@ async function copyResultsToClipboard() {
     try {
         await navigator.clipboard.writeText(text);
         
-        // Показываем сообщение об успехе
         copyMessage.classList.remove('hidden');
-        
-        // Скрываем сообщение через 3 секунды
         setTimeout(() => {
             copyMessage.classList.add('hidden');
         }, 3000);
@@ -442,12 +518,18 @@ function saveResultsToFile() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
+    const endTime = researchData.endTime || new Date();
+    const completionTime = endTime - researchData.startTime;
+    const minutes = Math.floor(completionTime / 60000);
+    const seconds = Math.floor((completionTime % 60000) / 1000);
+    const timeString = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
+    
     const text = `Результаты теста по кибербезопасности
 =================================
 Участник: ${userName}
 ID тестирования: ${analysis.participantId}
 Дата прохождения: ${new Date().toLocaleDateString('ru-RU')}
-Время прохождения: ${new Date(researchData.startTime).toLocaleTimeString('ru-RU')}
+Время прохождения: ${timeString}
 
 ОБЩИЕ РЕЗУЛЬТАТЫ:
 -----------------
@@ -459,7 +541,6 @@ ID тестирования: ${analysis.participantId}
 ДЕТАЛЬНАЯ СТАТИСТИКА:
 --------------------
 Самое сложное письмо: "${analysis.hardestEmail.subject}"
-${analysis.hardestEmail.successRate}% правильных ответов
 
 РЕКОМЕНДАЦИИ:
 -------------
@@ -468,11 +549,10 @@ ${getRecommendation(analysis.successRate)}
 СТАТИСТИКА ПО ПИСЬМАМ:
 ----------------------
 ${emails.map((email, index) => {
-    const stats = analysis.emailStats[email.id];
-    return `${index + 1}. "${email.subject}": ${stats ? stats.successRate + '% правильных' : 'не отвечено'}`;
+    const userResult = researchData.results.find(r => r.emailId === email.id);
+    return `${index + 1}. "${email.subject}": ${userResult ? (userResult.isCorrect ? 'Правильно ✓' : 'Неправильно ✗') : 'Не отвечено'}`;
 }).join('\n')}`;
 
-    // Создаем и скачиваем файл
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -505,14 +585,11 @@ function getRecommendation(percentage) {
 
 // Следующее письмо
 function nextEmail() {
-    currentEmailIndex++;
+    researchData.currentEmailIndex++;
     
-    console.log(`Текущий индекс: ${currentEmailIndex}, Всего писем: ${emails.length}`);
-    
-    if (currentEmailIndex < emails.length) {
-        loadEmail(currentEmailIndex);
+    if (researchData.currentEmailIndex < emails.length) {
+        loadEmail(researchData.currentEmailIndex);
     } else {
-        console.log('Тест завершен! Показываем результаты...');
         showResults();
     }
 }
@@ -521,34 +598,40 @@ function nextEmail() {
 function showResults() {
     gameScreen.classList.add('hidden');
     resultsScreen.classList.remove('hidden');
-    finalScore.textContent = score;
-    totalQuestionsDisplay.textContent = totalQuestions;
+    finalScore.textContent = researchData.score;
+    totalQuestionsDisplay.textContent = researchData.totalQuestions;
+    
+    researchData.endTime = new Date();
+    researchData.testStarted = false;
+    researchData.currentState = 'completed';
+    analyzeResearchData();
+    saveResearchData();
     
     showDetailedResults();
 }
 
 // Перезапуск игры
 function restartGame() {
-    currentEmailIndex = 0;
-    score = 0;
-    totalQuestions = 0;
-    pointsDisplay.textContent = score;
-    emailStartTimes = []; // Очищаем массив времени
-    
     researchData = {
         participantId: generateId(),
-        userName: researchData.userName, // Сохраняем имя
+        userName: researchData.userName,
         startTime: new Date(),
+        endTime: null,
         results: [],
-        group: getRandomGroup()
+        group: getRandomGroup(),
+        analysis: null,
+        currentEmailIndex: 0,
+        score: 0,
+        totalQuestions: 0,
+        testStarted: false,
+        currentState: 'start'
     };
     
-    localStorage.removeItem('researchData'); // Очищаем localStorage при перезапуске
+    emailStartTimes = [];
+    saveResearchData();
     
     resultsScreen.classList.add('hidden');
     startScreen.classList.remove('hidden');
-    
-    console.log('Игра перезапущена');
 }
 
 // Обработчик отправки формы
@@ -558,69 +641,116 @@ function handleFormSubmit(event) {
     const userName = userNameInput.value.trim();
     if (userName) {
         researchData.userName = userName;
-        localStorage.setItem('researchData', JSON.stringify(researchData));
-        emailStartTimes = []; // Инициализируем массив времени
+        researchData.participantId = generateId();
+        researchData.startTime = new Date();
+        researchData.group = getRandomGroup();
+        researchData.testStarted = true;
+        researchData.currentEmailIndex = 0;
+        researchData.score = 0;
+        researchData.totalQuestions = 0;
+        researchData.currentState = 'answering';
+        
+        saveResearchData();
+        emailStartTimes = [];
         
         startScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
-        loadEmail(currentEmailIndex);
-        
-        console.log(`Тест начат для пользователя: ${userName}`);
-        console.log(`Всего писем в тесте: ${emails.length}`);
+        loadEmail(researchData.currentEmailIndex);
     } else {
         alert('Пожалуйста, введите ваше имя.');
     }
 }
 
-// Загрузка сохраненных данных и восстановление состояния
-function loadSavedData() {
-    const saved = localStorage.getItem('researchData');
-    if (saved) {
-        const savedData = JSON.parse(saved);
-        
-        // Восстанавливаем данные исследования
-        researchData.participantId = savedData.participantId || generateId();
-        researchData.userName = savedData.userName || '';
-        researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : new Date();
-        researchData.results = savedData.results || [];
-        researchData.group = savedData.group || getRandomGroup();
-        
-        if (researchData.userName) {
-            userNameInput.value = researchData.userName;
-        }
-        
-        // Восстанавливаем счетчики
-        updateCounters();
-        
-        // Определяем текущий индекс письма
-        if (researchData.results.length > 0) {
-            // Находим последнее отвеченное письмо
-            const answeredEmailIds = researchData.results.map(r => r.emailId);
-            let lastAnsweredIndex = -1;
+// Восстановление состояния при загрузке
+function restoreState() {
+    const hasSavedData = loadSavedData();
+    
+    console.log('Восстановление состояния:', {
+        hasSavedData,
+        testStarted: researchData.testStarted,
+        currentState: researchData.currentState,
+        currentEmailIndex: researchData.currentEmailIndex,
+        resultsCount: researchData.results.length,
+        score: researchData.score,
+        totalQuestions: researchData.totalQuestions
+    });
+    
+    if (hasSavedData && researchData.testStarted) {
+        if (researchData.endTime) {
+            // Тест завершен - показываем результаты
+            console.log('Тест завершен, показываем результаты');
+            startScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+            finalScore.textContent = researchData.score;
+            totalQuestionsDisplay.textContent = researchData.totalQuestions;
+            showDetailedResults();
+        } else {
+            // Тест в процессе - продолжаем
+            console.log('Тест в процессе, продолжаем с письма:', researchData.currentEmailIndex + 1);
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            pointsDisplay.textContent = researchData.score;
             
-            for (let i = 0; i < emails.length; i++) {
-                if (answeredEmailIds.includes(emails[i].id)) {
-                    lastAnsweredIndex = i;
+            let emailToLoad = researchData.currentEmailIndex;
+            
+            if (researchData.currentState === 'showing_feedback') {
+                const currentEmailId = emails[researchData.currentEmailIndex].id;
+                const hasAnswered = researchData.results.some(result => result.emailId === currentEmailId);
+                
+                if (hasAnswered) {
+                    emailToLoad = researchData.currentEmailIndex;
+                    const email = emails[researchData.currentEmailIndex];
+                    const userResult = researchData.results.find(r => r.emailId === email.id);
+                    
+                    if (userResult) {
+                        answerButtons.forEach(btn => {
+                            btn.disabled = true;
+                            btn.classList.add('disabled');
+                            
+                            const isRealButton = btn.getAttribute('data-answer') === 'real';
+                            const isUserChoice = (isRealButton && userResult.userAnswer === false) || (!isRealButton && userResult.userAnswer === true);
+                            
+                            if (isUserChoice) {
+                                btn.classList.add('user-choice');
+                                if (userResult.isCorrect) {
+                                    btn.classList.add('correct');
+                                } else {
+                                    btn.classList.add('incorrect');
+                                }
+                            }
+                            
+                            if ((isRealButton && !email.isPhishing) || (!isRealButton && email.isPhishing)) {
+                                btn.classList.add('correct-answer');
+                            }
+                        });
+                        
+                        if (userResult.isCorrect) {
+                            resultText.textContent = "Правильно! 🎉";
+                            feedback.classList.add('good');
+                            feedback.classList.remove('bad');
+                        } else {
+                            resultText.textContent = "Неправильно! 😔";
+                            feedback.classList.add('bad');
+                            feedback.classList.remove('good');
+                        }
+                        
+                        explanation.textContent = email.explanation;
+                        feedback.classList.remove('hidden');
+                    }
+                } else {
+                    emailToLoad = researchData.currentEmailIndex;
                 }
             }
             
-            // Устанавливаем следующий индекс после последнего отвеченного
-            currentEmailIndex = lastAnsweredIndex + 1;
-            
-            // Если все письма отвечены, показываем результаты
-            if (currentEmailIndex >= emails.length) {
-                showResults();
-                return 'results';
-            } else {
-                // Если тест в процессе, показываем игровой экран
-                startScreen.classList.add('hidden');
-                gameScreen.classList.remove('hidden');
-                loadEmail(currentEmailIndex);
-                return 'game';
-            }
+            loadEmail(emailToLoad);
         }
+    } else {
+        console.log('Начинаем новый тест');
+        startScreen.classList.remove('hidden');
+        gameScreen.classList.add('hidden');
+        resultsScreen.classList.add('hidden');
     }
-    return 'start';
 }
 
 // Назначение обработчиков для кнопок результатов
@@ -640,27 +770,14 @@ function setupResultButtons() {
 
 // Инициализация
 function init() {
-    const state = loadSavedData();
-    
-    // Назначаем обработчики
     userForm.addEventListener('submit', handleFormSubmit);
     answerButtons[0].addEventListener('click', () => checkAnswer(false));
     answerButtons[1].addEventListener('click', () => checkAnswer(true));
     nextButton.addEventListener('click', nextEmail);
     
-    // Назначаем обработчики для кнопок результатов
     setupResultButtons();
     
-    // Если не восстанавливаем состояние, показываем стартовый экран
-    if (state === 'start') {
-        startScreen.classList.remove('hidden');
-        gameScreen.classList.add('hidden');
-        resultsScreen.classList.add('hidden');
-    }
-    
-    console.log(`Тренажер инициализирован. Всего писем: ${emails.length}`);
-    console.log(`Текущее состояние: ${state}`);
-    console.log(`Текущий счет: ${score} из ${totalQuestions}`);
+    restoreState();
 }
 
 // Запуск при загрузке страницы
