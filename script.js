@@ -151,6 +151,7 @@ let researchData = {
     participantId: generateId(),
     userName: '',
     startTime: new Date(),
+    endTime: null, // Добавляем время окончания
     results: [],
     group: getRandomGroup()
 };
@@ -358,7 +359,10 @@ function analyzeResearchData() {
 function showDetailedResults() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
-    const completionTime = new Date() - researchData.startTime;
+    
+    // Используем сохраненное время окончания
+    const endTime = researchData.endTime || new Date();
+    const completionTime = endTime - researchData.startTime;
     const minutes = Math.floor(completionTime / 60000);
     const seconds = Math.floor((completionTime % 60000) / 1000);
     
@@ -397,8 +401,9 @@ async function copyResultsToClipboard() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
-    // Добавляем расчет времени прохождения
-    const completionTime = new Date() - researchData.startTime;
+    // Используем сохраненное время окончания или текущее время как fallback
+    const endTime = researchData.endTime || new Date();
+    const completionTime = endTime - researchData.startTime;
     const minutes = Math.floor(completionTime / 60000);
     const seconds = Math.floor((completionTime % 60000) / 1000);
     const timeString = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
@@ -440,12 +445,19 @@ function saveResultsToFile() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
+    // Используем сохраненное время окончания
+    const endTime = researchData.endTime || new Date();
+    const completionTime = endTime - researchData.startTime;
+    const minutes = Math.floor(completionTime / 60000);
+    const seconds = Math.floor((completionTime % 60000) / 1000);
+    const timeString = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
+    
     const text = `Результаты теста по кибербезопасности
 =================================
 Участник: ${userName}
 ID тестирования: ${analysis.participantId}
 Дата прохождения: ${new Date().toLocaleDateString('ru-RU')}
-Время прохождения: ${new Date(researchData.startTime).toLocaleTimeString('ru-RU')}
+Время прохождения: ${timeString}
 
 ОБЩИЕ РЕЗУЛЬТАТЫ:
 -----------------
@@ -521,6 +533,10 @@ function showResults() {
     finalScore.textContent = score;
     totalQuestionsDisplay.textContent = totalQuestions;
     
+    // Сохраняем время окончания теста
+    researchData.endTime = new Date();
+    localStorage.setItem('researchData', JSON.stringify(researchData));
+    
     showDetailedResults();
 }
 
@@ -536,6 +552,7 @@ function restartGame() {
         participantId: generateId(),
         userName: researchData.userName, // Сохраняем имя
         startTime: new Date(),
+        endTime: null, // Сбрасываем время окончания
         results: [],
         group: getRandomGroup()
     };
@@ -617,4 +634,3 @@ function init() {
 
 // Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', init);
-
