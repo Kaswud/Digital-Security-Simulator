@@ -209,10 +209,10 @@ function loadEmail(index) {
     emailContent.innerHTML = email.content;
     resetButtons();
     feedback.classList.add('hidden');
-    
+
     // Записываем время начала показа этого письма
     emailStartTimes[index] = new Date();
-    
+
     // Добавляем отладку
     console.log(`Загружено письмо ${index + 1} из ${emails.length}: ${email.subject}`);
 }
@@ -220,7 +220,7 @@ function loadEmail(index) {
 // Запись результата в базу данных
 function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
     const email = emails[emailIndex];
-    
+
     researchData.results.push({
         emailId: email.id,
         emailSubject: email.subject,
@@ -231,7 +231,7 @@ function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
         timestamp: new Date().toLocaleString(),
         difficulty: email.difficulty
     });
-    
+
     localStorage.setItem('researchData', JSON.stringify(researchData));
 }
 
@@ -239,30 +239,30 @@ function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
 function checkAnswer(userAnswer) {
     const answerTime = new Date();
     const emailIndex = currentEmailIndex;
-    
+
     // Получаем время начала для текущего письма
     const startTime = emailStartTimes[emailIndex];
     let timeSpent = 0;
-    
+
     if (startTime) {
         timeSpent = answerTime - startTime;
     }
-    
+
     const email = emails[emailIndex];
     const isCorrect = (userAnswer === email.isPhishing);
-    
+
     totalQuestions++;
-    
+
     recordResult(emailIndex, userAnswer, isCorrect, timeSpent);
-    
+
     // Подсвечиваем кнопки
     answerButtons.forEach(btn => {
         btn.disabled = true;
         btn.classList.add('disabled');
-        
+
         const isRealButton = btn.getAttribute('data-answer') === 'real';
         const isUserChoice = (isRealButton && userAnswer === false) || (!isRealButton && userAnswer === true);
-        
+
         if (isUserChoice) {
             btn.classList.add('user-choice');
             if (isCorrect) {
@@ -271,12 +271,12 @@ function checkAnswer(userAnswer) {
                 btn.classList.add('incorrect');
             }
         }
-        
+
         if ((isRealButton && !email.isPhishing) || (!isRealButton && email.isPhishing)) {
             btn.classList.add('correct-answer');
         }
     });
-    
+
     if (isCorrect) {
         score++;
         resultText.textContent = "Правильно! 🎉";
@@ -287,57 +287,77 @@ function checkAnswer(userAnswer) {
         feedback.classList.add('bad');
         feedback.classList.remove('good');
     }
-    
+
     explanation.textContent = email.explanation;
     feedback.classList.remove('hidden');
     pointsDisplay.textContent = score;
-    
+
     // Отладка
     console.log(`Ответ на письмо ${currentEmailIndex + 1}. Всего писем: ${emails.length}`);
 }
 
-// Анализ результатов
+// Анализ результатов - ИСПРАВЛЕННАЯ ФУНКЦИЯ
 function analyzeResearchData() {
     const results = researchData.results;
     const total = results.length;
-    
+
     if (total === 0) return null;
-    
+
     const correctAnswers = results.filter(r => r.isCorrect).length;
     const successRate = Math.round((correctAnswers / total) * 100);
-    
-    // Анализ по письмам
+
+    // Анализ по письмам - ИСПРАВЛЕННАЯ ЛОГИКА
     const emailStats = {};
+
+    // Инициализируем статистику для всех писем
     emails.forEach(email => {
-        const emailResults = results.filter(r => r.emailId === email.id);
-        const correct = emailResults.filter(r => r.isCorrect).length;
-        const successRate = emailResults.length > 0 ? Math.round((correct / emailResults.length) * 100) : 0;
-        
         emailStats[email.id] = {
+            id: email.id,
             subject: email.subject,
-            total: emailResults.length,
-            correct: correct,
-            successRate: successRate
+            difficulty: email.difficulty,
+            total: 0,
+            correct: 0,
+            successRate: 0
         };
     });
-    
-    // Исправляем поиск самого сложного письма
-    let hardestEmail = { successRate: 100, subject: 'Нет данных' };
+
+    // Заполняем статистику фактическими результатами
+    results.forEach(result => {
+        if (emailStats[result.emailId]) {
+            emailStats[result.emailId].total++;
+            if (result.isCorrect) {
+                emailStats[result.emailId].correct++;
+            }
+        }
+    });
+
+    // Рассчитываем процент правильных для каждого письма
     Object.values(emailStats).forEach(stats => {
-        if (stats.total > 0 && stats.successRate < hardestEmail.successRate) {
+        if (stats.total > 0) {
+            stats.successRate = Math.round((stats.correct / stats.total) * 100);
+        }
+    });
+
+    // Находим самое сложное письмо (с наименьшим процентом правильных)
+    let hardestEmail = null;
+    let lowestSuccessRate = 100;
+
+    Object.values(emailStats).forEach(stats => {
+        if (stats.total > 0 && stats.successRate < lowestSuccessRate) {
+            lowestSuccessRate = stats.successRate;
             hardestEmail = stats;
         }
     });
-    
-    // Если все письма были отвечены правильно, берем первое с наименьшим процентом
-    if (hardestEmail.successRate === 100 && total > 0) {
-        hardestEmail = Object.values(emailStats)[0];
+
+    // Если все письма были отвечены правильно (100%), берем первое письмо
+    if (!hardestEmail || lowestSuccessRate === 100) {
+        hardestEmail = emailStats[emails[0].id] || { subject: 'Нет данных', successRate: 100 };
     }
-    
+
     // Среднее время (исключаем нулевые значения)
     const validTimes = results.filter(r => r.timeSpent > 0).map(r => r.timeSpent);
     const averageTime = validTimes.length > 0 ? Math.round(validTimes.reduce((sum, time) => sum + time, 0) / validTimes.length) : 0;
-    
+
     return {
         participantId: researchData.participantId,
         userName: researchData.userName,
@@ -359,7 +379,7 @@ function showDetailedResults() {
     const completionTime = new Date() - researchData.startTime;
     const minutes = Math.floor(completionTime / 60000);
     const seconds = Math.floor((completionTime % 60000) / 1000);
-    
+
     personalResult.innerHTML = `
         <div class="result-card">
             <h3>📊 Детальные результаты</h3>
@@ -367,7 +387,7 @@ function showDetailedResults() {
             <p><strong>🆔 ID тестирования:</strong> ${analysis.participantId}</p>
             <p><strong>📅 Дата прохождения:</strong> ${new Date().toLocaleDateString('ru-RU')}</p>
             <p><strong>⏱️ Время прохождения:</strong> ${minutes} мин ${seconds} сек</p>
-            
+
             <p><strong>🎯 Правильных ответов:</strong> ${analysis.correctAnswers} из ${analysis.totalQuestions}</p>
             <p><strong>📈 Процент правильных:</strong> ${analysis.successRate}%</p>
             <p><strong>⚡ Среднее время ответа:</strong> ${analysis.averageTimeSeconds} сек</p>
@@ -375,10 +395,11 @@ function showDetailedResults() {
             <p><strong>🏆 Уровень подготовки:</strong> ${getSkillLevel(analysis.successRate)}</p>
         </div>
     `;
-    
+
     // Отладка
     console.log(`Показаны результаты: ${analysis.correctAnswers} из ${analysis.totalQuestions}`);
-    console.log(`Всего писем в базе: ${emails.length}`);
+    console.log(`Самое сложное письмо: "${analysis.hardestEmail.subject}" (${analysis.hardestEmail.successRate}%)`);
+    console.log('Статистика по всем письмам:', analysis.emailStats);
 }
 
 // Определение уровня навыков
@@ -394,7 +415,7 @@ function getSkillLevel(percentage) {
 async function copyResultsToClipboard() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
-    
+
     const text = `Результаты теста по кибербезопасности
 ─────────────────────────────
 👤 Участник: ${userName}
@@ -411,15 +432,15 @@ async function copyResultsToClipboard() {
 
     try {
         await navigator.clipboard.writeText(text);
-        
+
         // Показываем сообщение об успехе
         copyMessage.classList.remove('hidden');
-        
+
         // Скрываем сообщение через 3 секунды
         setTimeout(() => {
             copyMessage.classList.add('hidden');
         }, 3000);
-        
+
     } catch (err) {
         console.error('Ошибка копирования: ', err);
         alert('Не удалось скопировать результаты. Скопируйте текст вручную.');
@@ -430,7 +451,7 @@ async function copyResultsToClipboard() {
 function saveResultsToFile() {
     const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
-    
+
     const text = `Результаты теста по кибербезопасности
 =================================
 Участник: ${userName}
@@ -465,12 +486,12 @@ ${emails.map((email, index) => {
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    
+
     const date = new Date().toISOString().split('T')[0];
-    const fileName = researchData.userName ? 
-        `Результат_${researchData.userName}_${date}.txt` : 
+    const fileName = researchData.userName ?
+        `Результат_${researchData.userName}_${date}.txt` :
         `Результат_теста_${date}.txt`;
-    
+
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
@@ -495,9 +516,9 @@ function getRecommendation(percentage) {
 // Следующее письмо
 function nextEmail() {
     currentEmailIndex++;
-    
+
     console.log(`Текущий индекс: ${currentEmailIndex}, Всего писем: ${emails.length}`);
-    
+
     if (currentEmailIndex < emails.length) {
         loadEmail(currentEmailIndex);
     } else {
@@ -512,7 +533,7 @@ function showResults() {
     resultsScreen.classList.remove('hidden');
     finalScore.textContent = score;
     totalQuestionsDisplay.textContent = totalQuestions;
-    
+
     showDetailedResults();
 }
 
@@ -523,7 +544,7 @@ function restartGame() {
     totalQuestions = 0;
     pointsDisplay.textContent = score;
     emailStartTimes = []; // Очищаем массив времени
-    
+
     researchData = {
         participantId: generateId(),
         userName: researchData.userName, // Сохраняем имя
@@ -531,27 +552,27 @@ function restartGame() {
         results: [],
         group: getRandomGroup()
     };
-    
+
     resultsScreen.classList.add('hidden');
     startScreen.classList.remove('hidden');
-    
+
     console.log('Игра перезапущена');
 }
 
 // Обработчик отправки формы
 function handleFormSubmit(event) {
     event.preventDefault();
-    
+
     const userName = userNameInput.value.trim();
     if (userName) {
         researchData.userName = userName;
         localStorage.setItem('researchData', JSON.stringify(researchData));
         emailStartTimes = []; // Инициализируем массив времени
-        
+
         startScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
         loadEmail(currentEmailIndex);
-        
+
         console.log(`Тест начат для пользователя: ${userName}`);
         console.log(`Всего писем в тесте: ${emails.length}`);
     } else {
@@ -576,11 +597,11 @@ function setupResultButtons() {
     if (restartButton) {
         restartButton.addEventListener('click', restartGame);
     }
-    
+
     if (copyResultsBtn) {
         copyResultsBtn.addEventListener('click', copyResultsToClipboard);
     }
-    
+
     if (saveResultsBtn) {
         saveResultsBtn.addEventListener('click', saveResultsToFile);
     }
@@ -589,21 +610,21 @@ function setupResultButtons() {
 // Инициализация
 function init() {
     loadSavedData();
-    
+
     // Назначаем обработчики
     userForm.addEventListener('submit', handleFormSubmit);
     answerButtons[0].addEventListener('click', () => checkAnswer(false));
     answerButtons[1].addEventListener('click', () => checkAnswer(true));
     nextButton.addEventListener('click', nextEmail);
-    
+
     // Назначаем обработчики для кнопок результатов
     setupResultButtons();
-    
+
     // Показываем стартовый экран
     startScreen.classList.remove('hidden');
     gameScreen.classList.add('hidden');
     resultsScreen.classList.add('hidden');
-    
+
     console.log(`Тренажер инициализирован. Всего писем: ${emails.length}`);
 }
 
