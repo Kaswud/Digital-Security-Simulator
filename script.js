@@ -148,18 +148,19 @@ const emails = [
 
 // Система сбора данных
 let researchData = {
-    participantId: generateId(),
+    participantId: '',
     userName: '',
-    startTime: new Date(),
+    startTime: null,
     endTime: null,
     results: [],
-    group: getRandomGroup(),
-    analysis: null // Добавляем поле для сохранения анализа
+    group: '',
+    analysis: null,
+    currentEmailIndex: 0,
+    score: 0,
+    totalQuestions: 0,
+    testStarted: false
 };
 
-let currentEmailIndex = 0;
-let score = 0;
-let totalQuestions = 0;
 let emailStartTimes = [];
 
 // Элементы страницы
@@ -213,6 +214,43 @@ function loadEmail(index) {
     feedback.classList.add('hidden');
     
     emailStartTimes[index] = new Date();
+    
+    // Сохраняем текущий прогресс
+    researchData.currentEmailIndex = index;
+    saveResearchData();
+}
+
+// Сохранение данных исследования
+function saveResearchData() {
+    localStorage.setItem('researchData', JSON.stringify(researchData));
+}
+
+// Загрузка сохраненных данных
+function loadSavedData() {
+    const saved = localStorage.getItem('researchData');
+    if (saved) {
+        const savedData = JSON.parse(saved);
+        
+        // Восстанавливаем все данные
+        researchData.participantId = savedData.participantId || generateId();
+        researchData.userName = savedData.userName || '';
+        researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : new Date();
+        researchData.endTime = savedData.endTime ? new Date(savedData.endTime) : null;
+        researchData.results = savedData.results || [];
+        researchData.group = savedData.group || getRandomGroup();
+        researchData.analysis = savedData.analysis || null;
+        researchData.currentEmailIndex = savedData.currentEmailIndex || 0;
+        researchData.score = savedData.score || 0;
+        researchData.totalQuestions = savedData.totalQuestions || 0;
+        researchData.testStarted = savedData.testStarted || false;
+        
+        if (researchData.userName) {
+            userNameInput.value = researchData.userName;
+        }
+        
+        return true;
+    }
+    return false;
 }
 
 // Запись результата в базу данных
@@ -230,13 +268,13 @@ function recordResult(emailIndex, userAnswer, isCorrect, timeSpent) {
         difficulty: email.difficulty
     });
     
-    localStorage.setItem('researchData', JSON.stringify(researchData));
+    saveResearchData();
 }
 
 // Проверка ответа
 function checkAnswer(userAnswer) {
     const answerTime = new Date();
-    const emailIndex = currentEmailIndex;
+    const emailIndex = researchData.currentEmailIndex;
     
     const startTime = emailStartTimes[emailIndex];
     let timeSpent = 0;
@@ -248,7 +286,10 @@ function checkAnswer(userAnswer) {
     const email = emails[emailIndex];
     const isCorrect = (userAnswer === email.isPhishing);
     
-    totalQuestions++;
+    researchData.totalQuestions++;
+    if (isCorrect) {
+        researchData.score++;
+    }
     
     recordResult(emailIndex, userAnswer, isCorrect, timeSpent);
     
@@ -275,7 +316,6 @@ function checkAnswer(userAnswer) {
     });
     
     if (isCorrect) {
-        score++;
         resultText.textContent = "Правильно! 🎉";
         feedback.classList.add('good');
         feedback.classList.remove('bad');
@@ -287,12 +327,13 @@ function checkAnswer(userAnswer) {
     
     explanation.textContent = email.explanation;
     feedback.classList.remove('hidden');
-    pointsDisplay.textContent = score;
+    pointsDisplay.textContent = researchData.score;
+    
+    saveResearchData();
 }
 
-// Анализ результатов - ТЕПЕРЬ СОХРАНЯЕТ РЕЗУЛЬТАТ
+// Анализ результатов
 function analyzeResearchData() {
-    // Если анализ уже был сохранен - возвращаем его
     if (researchData.analysis) {
         return researchData.analysis;
     }
@@ -311,14 +352,12 @@ function analyzeResearchData() {
     let hardestEmail = null;
     
     if (wrongAnswers.length > 0) {
-        // Если есть неправильные ответы - выбираем случайное из них
         const randomWrongAnswer = wrongAnswers[Math.floor(Math.random() * wrongAnswers.length)];
         hardestEmail = {
             subject: randomWrongAnswer.emailSubject,
             successRate: 0
         };
     } else {
-        // Если все ответы правильные - выбираем случайное письмо с уровнем "hard"
         const hardEmails = emails.filter(email => email.difficulty === "hard");
         if (hardEmails.length > 0) {
             const randomHardEmail = hardEmails[Math.floor(Math.random() * hardEmails.length)];
@@ -327,7 +366,6 @@ function analyzeResearchData() {
                 successRate: 100
             };
         } else {
-            // Если нет писем "hard" - выбираем случайное письмо
             const randomEmail = emails[Math.floor(Math.random() * emails.length)];
             hardestEmail = {
                 subject: randomEmail.subject,
@@ -336,11 +374,9 @@ function analyzeResearchData() {
         }
     }
     
-    // Среднее время (исключаем нулевые значения)
     const validTimes = results.filter(r => r.timeSpent > 0).map(r => r.timeSpent);
     const averageTime = validTimes.length > 0 ? Math.round(validTimes.reduce((sum, time) => sum + time, 0) / validTimes.length) : 0;
     
-    // Сохраняем анализ в researchData
     researchData.analysis = {
         participantId: researchData.participantId,
         userName: researchData.userName,
@@ -353,14 +389,14 @@ function analyzeResearchData() {
         hardestEmail: hardestEmail
     };
     
-    localStorage.setItem('researchData', JSON.stringify(researchData));
+    saveResearchData();
     
     return researchData.analysis;
 }
 
 // Показать детальные результаты
 function showDetailedResults() {
-    const analysis = analyzeResearchData(); // Теперь всегда возвращает одинаковый результат
+    const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
     const endTime = researchData.endTime || new Date();
@@ -396,7 +432,7 @@ function getSkillLevel(percentage) {
 
 // Копирование результатов в буфер обмена
 async function copyResultsToClipboard() {
-    const analysis = analyzeResearchData(); // Теперь всегда одинаковый результат
+    const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
     const endTime = researchData.endTime || new Date();
@@ -436,7 +472,7 @@ async function copyResultsToClipboard() {
 
 // Сохранение результатов в файл
 function saveResultsToFile() {
-    const analysis = analyzeResearchData(); // Теперь всегда одинаковый результат
+    const analysis = analyzeResearchData();
     const userName = researchData.userName || 'Участник';
     
     const endTime = researchData.endTime || new Date();
@@ -506,10 +542,10 @@ function getRecommendation(percentage) {
 
 // Следующее письмо
 function nextEmail() {
-    currentEmailIndex++;
+    researchData.currentEmailIndex++;
     
-    if (currentEmailIndex < emails.length) {
-        loadEmail(currentEmailIndex);
+    if (researchData.currentEmailIndex < emails.length) {
+        loadEmail(researchData.currentEmailIndex);
     } else {
         showResults();
     }
@@ -519,25 +555,19 @@ function nextEmail() {
 function showResults() {
     gameScreen.classList.add('hidden');
     resultsScreen.classList.remove('hidden');
-    finalScore.textContent = score;
-    totalQuestionsDisplay.textContent = totalQuestions;
+    finalScore.textContent = researchData.score;
+    totalQuestionsDisplay.textContent = researchData.totalQuestions;
     
     researchData.endTime = new Date();
-    // Вызываем анализ и сохраняем результат
+    researchData.testStarted = false;
     analyzeResearchData();
-    localStorage.setItem('researchData', JSON.stringify(researchData));
+    saveResearchData();
     
     showDetailedResults();
 }
 
 // Перезапуск игры
 function restartGame() {
-    currentEmailIndex = 0;
-    score = 0;
-    totalQuestions = 0;
-    pointsDisplay.textContent = score;
-    emailStartTimes = [];
-    
     researchData = {
         participantId: generateId(),
         userName: researchData.userName,
@@ -545,8 +575,15 @@ function restartGame() {
         endTime: null,
         results: [],
         group: getRandomGroup(),
-        analysis: null // Сбрасываем анализ
+        analysis: null,
+        currentEmailIndex: 0,
+        score: 0,
+        totalQuestions: 0,
+        testStarted: false
     };
+    
+    emailStartTimes = [];
+    saveResearchData();
     
     resultsScreen.classList.add('hidden');
     startScreen.classList.remove('hidden');
@@ -559,27 +596,51 @@ function handleFormSubmit(event) {
     const userName = userNameInput.value.trim();
     if (userName) {
         researchData.userName = userName;
-        localStorage.setItem('researchData', JSON.stringify(researchData));
+        researchData.participantId = generateId();
+        researchData.startTime = new Date();
+        researchData.group = getRandomGroup();
+        researchData.testStarted = true;
+        researchData.currentEmailIndex = 0;
+        researchData.score = 0;
+        researchData.totalQuestions = 0;
+        
+        saveResearchData();
         emailStartTimes = [];
         
         startScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
-        loadEmail(currentEmailIndex);
+        loadEmail(researchData.currentEmailIndex);
     } else {
         alert('Пожалуйста, введите ваше имя.');
     }
 }
 
-// Загрузка сохраненных данных
-function loadSavedData() {
-    const saved = localStorage.getItem('researchData');
-    if (saved) {
-        const savedData = JSON.parse(saved);
-        researchData.userName = savedData.userName || '';
-        researchData.analysis = savedData.analysis || null; // Загружаем сохраненный анализ
-        if (researchData.userName) {
-            userNameInput.value = researchData.userName;
+// Восстановление состояния при загрузке
+function restoreState() {
+    const hasSavedData = loadSavedData();
+    
+    if (hasSavedData && researchData.testStarted) {
+        // Если тест был начат, продолжаем с того же места
+        if (researchData.endTime) {
+            // Тест завершен - показываем результаты
+            startScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+            finalScore.textContent = researchData.score;
+            totalQuestionsDisplay.textContent = researchData.totalQuestions;
+            showDetailedResults();
+        } else {
+            // Тест в процессе - продолжаем
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            pointsDisplay.textContent = researchData.score;
+            loadEmail(researchData.currentEmailIndex);
         }
+    } else {
+        // Начинаем новый тест
+        startScreen.classList.remove('hidden');
+        gameScreen.classList.add('hidden');
+        resultsScreen.classList.add('hidden');
     }
 }
 
@@ -600,8 +661,6 @@ function setupResultButtons() {
 
 // Инициализация
 function init() {
-    loadSavedData();
-    
     userForm.addEventListener('submit', handleFormSubmit);
     answerButtons[0].addEventListener('click', () => checkAnswer(false));
     answerButtons[1].addEventListener('click', () => checkAnswer(true));
@@ -609,9 +668,7 @@ function init() {
     
     setupResultButtons();
     
-    startScreen.classList.remove('hidden');
-    gameScreen.classList.add('hidden');
-    resultsScreen.classList.add('hidden');
+    restoreState();
 }
 
 // Запуск при загрузке страницы
