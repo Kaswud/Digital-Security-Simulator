@@ -74,7 +74,7 @@ const emails = [
     {
         id: 6,
         sender: "YouTube <no-reply@youtube.com>",
-        subject: "На ваш видео поступила жалоба",
+        subject: "На ваше видео поступила жалоба",
         content: `
             <p>Здравствуйте!</p>
             <p>На ваше видео \"Как научиться программировать\" поступила жалоба о нарушении правил сообщества.</p>
@@ -630,3 +630,4 @@ function init() {
 
 // Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', init);
+
