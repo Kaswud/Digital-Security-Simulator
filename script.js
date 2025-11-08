@@ -236,7 +236,7 @@ function loadSavedData() {
         try {
             const savedData = JSON.parse(saved);
             
-            // Восстанавливаем только основные данные, сбрасываем состояние теста
+            // Восстанавливаем все данные
             researchData.participantId = savedData.participantId || generateId();
             researchData.userName = savedData.userName || '';
             researchData.startTime = savedData.startTime ? new Date(savedData.startTime) : null;
@@ -244,30 +244,22 @@ function loadSavedData() {
             researchData.results = savedData.results || [];
             researchData.group = savedData.group || getRandomGroup();
             researchData.analysis = savedData.analysis || null;
-            
-            // Сбрасываем состояние теста, если он не был завершен
-            if (savedData.testCompleted) {
-                researchData.testStarted = false;
-                researchData.testCompleted = true;
-                researchData.currentEmailIndex = 0;
-                researchData.score = savedData.score || 0;
-                researchData.totalQuestions = savedData.totalQuestions || 0;
-                researchData.currentState = 'completed';
-            } else {
-                researchData.testStarted = false; // Всегда сбрасываем начатое состояние
-                researchData.testCompleted = false;
-                researchData.currentEmailIndex = 0;
-                researchData.score = 0;
-                researchData.totalQuestions = 0;
-                researchData.currentState = 'start';
-            }
+            researchData.currentEmailIndex = savedData.currentEmailIndex || 0;
+            researchData.score = savedData.score || 0;
+            researchData.totalQuestions = savedData.totalQuestions || 0;
+            researchData.testStarted = savedData.testStarted || false;
+            researchData.testCompleted = savedData.testCompleted || false;
+            researchData.currentState = savedData.currentState || 'start';
             
             if (researchData.userName) {
                 userNameInput.value = researchData.userName;
             }
             
             console.log('Данные загружены:', {
+                testStarted: researchData.testStarted,
                 testCompleted: researchData.testCompleted,
+                currentState: researchData.currentState,
+                currentEmailIndex: researchData.currentEmailIndex,
                 resultsCount: researchData.results.length,
                 score: researchData.score,
                 totalQuestions: researchData.totalQuestions
@@ -422,9 +414,9 @@ function analyzeResearchData() {
     // Время прохождения
     const endTime = researchData.endTime || new Date();
     const startTime = researchData.startTime || new Date();
-    const completionTime = endTime - startTime;
-    const minutes = Math.max(0, Math.floor(completionTime / 60000));
-    const seconds = Math.max(0, Math.floor((completionTime % 60000) / 1000));
+    const completionTime = Math.max(0, endTime - startTime);
+    const minutes = Math.floor(completionTime / 60000);
+    const seconds = Math.floor((completionTime % 60000) / 1000);
     
     return {
         participantId: researchData.participantId,
@@ -670,45 +662,88 @@ function restoreState() {
     
     console.log('Восстановление состояния:', {
         hasSavedData,
+        testStarted: researchData.testStarted,
         testCompleted: researchData.testCompleted,
+        currentState: researchData.currentState,
+        currentEmailIndex: researchData.currentEmailIndex,
         resultsCount: researchData.results.length
     });
     
-    if (hasSavedData && researchData.testCompleted) {
-        // Показываем результаты завершенного теста
-        console.log('Показываем результаты завершенного теста');
-        startScreen.classList.add('hidden');
-        gameScreen.classList.add('hidden');
-        resultsScreen.classList.remove('hidden');
-        finalScore.textContent = researchData.score;
-        totalQuestionsDisplay.textContent = researchData.totalQuestions;
-        showDetailedResults();
+    if (hasSavedData) {
+        if (researchData.testCompleted) {
+            // Показываем результаты завершенного теста
+            console.log('Показываем результаты завершенного теста');
+            startScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+            finalScore.textContent = researchData.score;
+            totalQuestionsDisplay.textContent = researchData.totalQuestions;
+            showDetailedResults();
+        } else if (researchData.testStarted && researchData.currentState !== 'start') {
+            // Продолжаем незавершенный тест
+            console.log('Продолжаем тест с письма:', researchData.currentEmailIndex + 1);
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            pointsDisplay.textContent = researchData.score;
+            
+            // Восстанавливаем состояние интерфейса
+            if (researchData.currentState === 'showing_feedback') {
+                // Показываем фидбек для текущего письма
+                const email = emails[researchData.currentEmailIndex];
+                const userResult = researchData.results.find(r => r.emailId === email.id);
+                
+                if (userResult) {
+                    answerButtons.forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.add('disabled');
+                        
+                        const isRealButton = btn.getAttribute('data-answer') === 'real';
+                        const isUserChoice = (isRealButton && userResult.userAnswer === false) || (!isRealButton && userResult.userAnswer === true);
+                        
+                        if (isUserChoice) {
+                            btn.classList.add('user-choice');
+                            if (userResult.isCorrect) {
+                                btn.classList.add('correct');
+                            } else {
+                                btn.classList.add('incorrect');
+                            }
+                        }
+                        
+                        if ((isRealButton && !email.isPhishing) || (!isRealButton && email.isPhishing)) {
+                            btn.classList.add('correct-answer');
+                        }
+                    });
+                    
+                    if (userResult.isCorrect) {
+                        resultText.textContent = "Правильно! 🎉";
+                        feedback.classList.add('good');
+                        feedback.classList.remove('bad');
+                    } else {
+                        resultText.textContent = "Неправильно! 😔";
+                        feedback.classList.add('bad');
+                        feedback.classList.remove('good');
+                    }
+                    
+                    explanation.textContent = email.explanation;
+                    feedback.classList.remove('hidden');
+                }
+            } else {
+                // Загружаем текущее письмо
+                loadEmail(researchData.currentEmailIndex);
+            }
+        } else {
+            // Начинаем новый тест
+            console.log('Начинаем новый тест');
+            startScreen.classList.remove('hidden');
+            gameScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+        }
     } else {
-        // Всегда начинаем с начала
-        console.log('Начинаем новый тест');
+        // Начинаем новый тест
+        console.log('Начинаем новый тест (нет сохраненных данных)');
         startScreen.classList.remove('hidden');
         gameScreen.classList.add('hidden');
         resultsScreen.classList.add('hidden');
-        
-        // Очищаем старые данные если они есть
-        if (hasSavedData && !researchData.testCompleted) {
-            researchData = {
-                participantId: generateId(),
-                userName: researchData.userName,
-                startTime: null,
-                endTime: null,
-                results: [],
-                group: getRandomGroup(),
-                analysis: null,
-                currentEmailIndex: 0,
-                score: 0,
-                totalQuestions: 0,
-                testStarted: false,
-                testCompleted: false,
-                currentState: 'start'
-            };
-            saveResearchData();
-        }
     }
 }
 
