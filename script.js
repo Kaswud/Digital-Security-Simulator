@@ -212,6 +212,9 @@ function loadEmail(index) {
     
     // Записываем время начала показа этого письма
     emailStartTimes[index] = new Date();
+    
+    // Добавляем отладку
+    console.log(`Загружено письмо ${index + 1} из ${emails.length}: ${email.subject}`);
 }
 
 // Запись результата в базу данных
@@ -288,6 +291,9 @@ function checkAnswer(userAnswer) {
     explanation.textContent = email.explanation;
     feedback.classList.remove('hidden');
     pointsDisplay.textContent = score;
+    
+    // Отладка
+    console.log(`Ответ на письмо ${currentEmailIndex + 1}. Всего писем: ${emails.length}`);
 }
 
 // Анализ результатов
@@ -369,6 +375,10 @@ function showDetailedResults() {
             <p><strong>🏆 Уровень подготовки:</strong> ${getSkillLevel(analysis.successRate)}</p>
         </div>
     `;
+    
+    // Отладка
+    console.log(`Показаны результаты: ${analysis.correctAnswers} из ${analysis.totalQuestions}`);
+    console.log(`Всего писем в базе: ${emails.length}`);
 }
 
 // Определение уровня навыков
@@ -486,9 +496,12 @@ function getRecommendation(percentage) {
 function nextEmail() {
     currentEmailIndex++;
     
+    console.log(`Текущий индекс: ${currentEmailIndex}, Всего писем: ${emails.length}`);
+    
     if (currentEmailIndex < emails.length) {
         loadEmail(currentEmailIndex);
     } else {
+        console.log('Тест завершен! Показываем результаты...');
         showResults();
     }
 }
@@ -521,6 +534,8 @@ function restartGame() {
     
     resultsScreen.classList.add('hidden');
     startScreen.classList.remove('hidden');
+    
+    console.log('Игра перезапущена');
 }
 
 // Обработчик отправки формы
@@ -536,6 +551,9 @@ function handleFormSubmit(event) {
         startScreen.classList.add('hidden');
         gameScreen.classList.remove('hidden');
         loadEmail(currentEmailIndex);
+        
+        console.log(`Тест начат для пользователя: ${userName}`);
+        console.log(`Всего писем в тесте: ${emails.length}`);
     } else {
         alert('Пожалуйста, введите ваше имя.');
     }
@@ -585,6 +603,8 @@ function init() {
     startScreen.classList.remove('hidden');
     gameScreen.classList.add('hidden');
     resultsScreen.classList.add('hidden');
+    
+    console.log(`Тренажер инициализирован. Всего писем: ${emails.length}`);
 }
 
 // Запуск при загрузке страницы
