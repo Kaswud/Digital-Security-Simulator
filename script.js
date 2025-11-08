@@ -679,16 +679,22 @@ function restoreState() {
             finalScore.textContent = researchData.score;
             totalQuestionsDisplay.textContent = researchData.totalQuestions;
             showDetailedResults();
-        } else if (researchData.testStarted && researchData.currentState !== 'start') {
+        } else if (researchData.testStarted) {
             // Продолжаем незавершенный тест
             console.log('Продолжаем тест с письма:', researchData.currentEmailIndex + 1);
             startScreen.classList.add('hidden');
             gameScreen.classList.remove('hidden');
             pointsDisplay.textContent = researchData.score;
             
-            // Восстанавливаем состояние интерфейса
-            if (researchData.currentState === 'showing_feedback') {
-                // Показываем фидбек для текущего письма
+            // Определяем, какое письмо загружать
+            let emailToLoad = researchData.currentEmailIndex;
+            
+            // Проверяем, ответил ли пользователь на текущее письмо
+            const currentEmailId = emails[researchData.currentEmailIndex]?.id;
+            const hasAnsweredCurrent = researchData.results.some(result => result.emailId === currentEmailId);
+            
+            if (researchData.currentState === 'showing_feedback' && hasAnsweredCurrent) {
+                // Восстанавливаем состояние фидбека
                 const email = emails[researchData.currentEmailIndex];
                 const userResult = researchData.results.find(r => r.emailId === email.id);
                 
@@ -729,7 +735,7 @@ function restoreState() {
                 }
             } else {
                 // Загружаем текущее письмо
-                loadEmail(researchData.currentEmailIndex);
+                loadEmail(emailToLoad);
             }
         } else {
             // Начинаем новый тест
